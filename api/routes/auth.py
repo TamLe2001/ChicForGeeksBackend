@@ -95,7 +95,7 @@ def register():
 		'password_hash': hash_password(password),
 		'role': payload.get('role', 'user'),
 		'profile_picture': payload.get('profile_picture'),
-		'bio': payload.get('bio'),
+		'bio': payload.get('bio', ''),
 		'birthday': payload.get('birthday'),
 		'created_at': datetime.now(timezone.utc),
 	}
