@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-
 def normalize_outfit_payload(payload):
 	if payload is None:
 		return {}

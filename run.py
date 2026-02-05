@@ -8,6 +8,7 @@ from api.config import Config
 from api.routes.auth import auth_bp
 from api.routes.users import users_bp
 from api.routes.outfits import outfits_bp
+from api.routes.follows import follows_bp
 
 
 def create_app():
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/api')
     app.register_blueprint(users_bp, url_prefix='/api')
     app.register_blueprint(outfits_bp, url_prefix='/api')
+    app.register_blueprint(follows_bp, url_prefix='/api')
     
     # Serve uploaded files
     @app.route('/uploads/<path:filepath>')

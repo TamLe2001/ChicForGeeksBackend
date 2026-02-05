@@ -14,8 +14,6 @@ def normalize_user_payload(payload):
 		'bio': payload.get('bio'),
 		'birthday': payload.get('birthday'),
 		'created_at': payload.get('created_at') or datetime.now(timezone.utc),
-		'followers': payload.get('followers', []),
-        'following': payload.get('following', []),
 	}
 
 
@@ -32,8 +30,6 @@ def serialize_user(user_doc):
 		'birthday': user_doc.get('birthday'),
 		'role': user_doc.get('role', 'user'),
 		'created_at': user_doc.get('created_at'),
-		'followers': user_doc.get('followers', []),
-        'following': user_doc.get('following', []),
 	}
 
 
