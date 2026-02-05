@@ -1,0 +1,16 @@
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+
+class Config:
+	SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+	DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+	JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)
+	JWT_EXPIRES_MINUTES = int(os.getenv('JWT_EXPIRES_MINUTES', '60'))
+
+	# MongoDB settings
+	MONGO_URI = os.getenv('MONGO_URI')
+	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'chicforgeeks')
