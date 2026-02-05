@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 
@@ -32,6 +32,11 @@ def create_app():
     app.register_blueprint(users_bp, url_prefix='/api')
     app.register_blueprint(outfits_bp, url_prefix='/api')
     
+    # Serve uploaded files
+    @app.route('/uploads/<path:filepath>')
+    def serve_uploads(filepath):
+        upload_dir = os.path.join(app.root_path, '..', 'uploads')
+        return send_from_directory(upload_dir, filepath)
     
     return app
 
