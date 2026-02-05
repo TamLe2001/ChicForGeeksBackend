@@ -13,6 +13,11 @@ def list_users():
 	users = current_app.db.users.find().sort('created_at', -1)
 	return jsonify([serialize_user(u) for u in users]), 200
 
+@users_bp.get('/usersnotoken')
+def list_users_notoken():
+	users = current_app.db.users.find().sort('created_at', -1)
+	return jsonify([serialize_user(u) for u in users]), 200
+
 
 @users_bp.post('/users')
 @token_required
