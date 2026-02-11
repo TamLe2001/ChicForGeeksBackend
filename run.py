@@ -14,7 +14,11 @@ from api.routes.follows import follows_bp
 def create_app():
     app = Flask(__name__)
     # Enable CORS for all routes
-    CORS(app, "http://localhost:3000", supports_credentials=True)
+    CORS(
+        app,
+        resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+        supports_credentials=True,
+    )
     
     # Load configuration
     app.config.from_object(Config)
