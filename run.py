@@ -13,7 +13,6 @@ from api.routes.follows import follows_bp
 
 def create_app():
     app = Flask(__name__)
-    
     # Enable CORS for all routes
     CORS(app)
     
@@ -29,10 +28,9 @@ def create_app():
     app.db = client[app.config.get('ChicForGeeks', 'database')]
 
     # Register blueprints
-    app.register_blueprint(auth_bp, url_prefix='/api')
-    app.register_blueprint(users_bp, url_prefix='/api')
-    app.register_blueprint(outfits_bp, url_prefix='/api')
-    app.register_blueprint(follows_bp, url_prefix='/api')
+    blueprints = [auth_bp, users_bp, outfits_bp, follows_bp]
+    for blueprint in blueprints:
+        app.register_blueprint(blueprint, url_prefix='/api')
     
     # Serve uploaded files
     @app.route('/uploads/<path:filepath>')
