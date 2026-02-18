@@ -9,12 +9,13 @@ from api.routes.auth import auth_bp
 from api.routes.users import users_bp
 from api.routes.outfits import outfits_bp
 from api.routes.follows import follows_bp
+from api.routes.files import files_bp
 
 
 def create_app():
     app = Flask(__name__)
     # Enable CORS for all routes
-    CORS(app, "http://localhost:3000", supports_credentials=True)
+    CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
     
     # Load configuration
     app.config.from_object(Config)
@@ -28,7 +29,7 @@ def create_app():
     app.db = client[app.config.get('ChicForGeeks', 'database')]
 
     # Register blueprints
-    blueprints = [auth_bp, users_bp, outfits_bp, follows_bp]
+    blueprints = [auth_bp, users_bp, outfits_bp, follows_bp, files_bp]
     for blueprint in blueprints:
         app.register_blueprint(blueprint, url_prefix='/api')
     

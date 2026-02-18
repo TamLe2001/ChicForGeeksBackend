@@ -14,3 +14,12 @@ class Config:
 	# MongoDB settings
 	MONGO_URI = os.getenv('MONGO_URI')
 	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'chicforgeeks')
+
+	# NextCloud settings
+	NEXTCLOUD_URL = os.getenv('NEXTCLOUD_URL')
+	NEXTCLOUD_USER = os.getenv('NEXTCLOUD_USER')
+	NEXTCLOUD_PASS = os.getenv('NEXTCLOUD_PASS')
+	
+	# File upload settings
+	MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+	ALLOWED_EXTENSIONS = {'glb', 'gltf'}
