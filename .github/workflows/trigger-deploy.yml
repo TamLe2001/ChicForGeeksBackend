@@ -14,5 +14,5 @@ jobs:
         with:
           token: ${{ secrets.PARENT_REPO_TOKEN }}
           repository: ${{ secrets.PARENT_REPO }}
-          event-type: submodule_update
+          event-type: backend_submodule_update
           client-payload: '{"submodule":"backend","ref":"${{ github.ref }}","sha":"${{ github.sha }}"}'
