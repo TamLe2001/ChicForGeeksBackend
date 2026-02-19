@@ -10,6 +10,7 @@ from api.routes.users import users_bp
 from api.routes.outfits import outfits_bp
 from api.routes.follows import follows_bp
 from api.routes.files import files_bp
+from api.routes.retexture import retexture_bp
 
 
 def create_app():
@@ -29,7 +30,7 @@ def create_app():
     app.db = client[app.config.get('ChicForGeeks', 'database')]
 
     # Register blueprints
-    blueprints = [auth_bp, users_bp, outfits_bp, follows_bp, files_bp]
+    blueprints = [auth_bp, users_bp, outfits_bp, follows_bp, files_bp, retexture_bp]
     for blueprint in blueprints:
         app.register_blueprint(blueprint, url_prefix='/api')
     

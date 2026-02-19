@@ -15,7 +15,7 @@ def allowed_file(filename):
 
 @files_bp.route('/upload', methods=['POST'])
 def upload_to_cloud():
-    """Upload GLB/GLTF files to NextCloud storage"""
+    """Upload GLB/GLTF files to NextCloud storage with folder organization"""
     try:
         # Validate file presence
         if 'file' not in request.files:
@@ -28,6 +28,20 @@ def upload_to_cloud():
         
         if not allowed_file(file.filename):
             return {"error": "Only GLB/GLTF files allowed"}, 400
+        
+        # Get user_id and category from request args or form data
+        user_id = request.form.get('user_id') or request.args.get('user_id')
+        category = request.form.get('category') or request.args.get('category')
+        
+        if not user_id:
+            return {"error": "user_id is required"}, 400
+        
+        if not category:
+            return {"error": "category is required (shirt, hat, pants, shoes)"}, 400
+        
+        valid_categories = {'shirt', 'hat', 'pants', 'shoes'}
+        if category.lower() not in valid_categories:
+            return {"error": f"Invalid category. Must be one of: {', '.join(valid_categories)}"}, 400
         
         # Check file size
         max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
@@ -42,8 +56,32 @@ def upload_to_cloud():
         if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
             return {"error": "NextCloud not configured"}, 500
         
-        # Upload to NextCloud
-        upload_url = f"{nextcloud_url}{file.filename}"
+        # Create folders if they don't exist: user_id/category/
+        base_path = f"{nextcloud_url}{user_id}/"
+        category_path = f"{base_path}{category}/"
+        
+        # Create user folder
+        create_folder_response = requests.mkcol(
+            base_path,
+            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            timeout=10
+        )
+        # Status 201 = created, 405 = already exists, both are OK
+        if create_folder_response.status_code not in [201, 405]:
+            return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
+        
+        # Create category folder
+        create_category_response = requests.mkcol(
+            category_path,
+            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            timeout=10
+        )
+        # Status 201 = created, 405 = already exists, both are OK
+        if create_category_response.status_code not in [201, 405]:
+            return {"error": f"Failed to create category folder: {create_category_response.status_code}"}, 500
+        
+        # Upload to NextCloud in organized folder
+        upload_url = f"{category_path}{file.filename}"
         headers = {"Content-Type": file.content_type or "application/octet-stream"}
         
         response = requests.put(
@@ -63,6 +101,8 @@ def upload_to_cloud():
         # Save metadata to MongoDB
         file_doc = {
             "filename": file.filename,
+            "user_id": user_id,
+            "category": category.lower(),
             "url": upload_url,
             "size": file.content_length or 0,
             "content_type": file.content_type or "application/octet-stream",
@@ -89,9 +129,18 @@ def upload_to_cloud():
 
 @files_bp.route('/files', methods=['GET'])
 def list_files():
-    """List all uploaded files"""
+    """List all uploaded files, optionally filtered by user_id"""
     try:
-        files = list(current_app.db.files.find({}, {'_id': 1, 'filename': 1, 'url': 1, 'size': 1, 'uploaded_at': 1}))
+        user_id = request.args.get('user_id')
+        category = request.args.get('category')
+        
+        query = {}
+        if user_id:
+            query['user_id'] = user_id
+        if category:
+            query['category'] = category.lower()
+        
+        files = list(current_app.db.files.find(query, {'_id': 1, 'filename': 1, 'url': 1, 'size': 1, 'user_id': 1, 'category': 1, 'uploaded_at': 1}))
         
         # Convert ObjectId to string for JSON serialization
         for f in files:

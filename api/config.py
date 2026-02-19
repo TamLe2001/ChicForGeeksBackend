@@ -23,3 +23,7 @@ class Config:
 	# File upload settings
 	MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 	ALLOWED_EXTENSIONS = {'glb', 'gltf'}
+
+	# Meshy settings
+	MESHY_API_KEY = os.getenv('MESHY_API_KEY')
+	INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY')
