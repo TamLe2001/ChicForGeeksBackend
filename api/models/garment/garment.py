@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
+from .enums import Gender, Style
 
 
 class Garment(ABC):
@@ -12,8 +13,8 @@ class Garment(ABC):
         self,
         name: str,
         user_id: str,
-        gender: str,
-        style: str,
+        gender: Gender,
+        style: Style,
         reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
         **kwargs
@@ -24,16 +25,16 @@ class Garment(ABC):
         Args:
             name: Name of the garment
             user_id: User ID who created this garment
-            gender: Target gender ('male', 'female', 'unisex')
-            style: Genre or category (e.g., 'streetwear', 'formal', 'casual', etc.)
+            gender: Target gender (Gender enum)
+            style: Genre or category (Style enum)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
             **kwargs: Additional attributes specific to garment type
         """
         self.name = name
         self.user_id = user_id
-        self.gender = gender
-        self.style = style
+        self.gender = gender if isinstance(gender, Gender) else Gender(gender)
+        self.style = style if isinstance(style, Style) else Style(style)
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
         self._id = None  # Set by database
@@ -45,8 +46,8 @@ class Garment(ABC):
             "type": self.get_type(),
             "name": self.name,
             "user_id": self.user_id,
-            "gender": self.gender,
-            "style": self.style,
+            "gender": self.gender.value,
+            "style": self.style.value,
             "reference": self.reference,
             "created_at": self.created_at,
         }

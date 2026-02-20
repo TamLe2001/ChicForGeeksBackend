@@ -1,8 +1,9 @@
-from flask import Blueprint, request, current_app, send_file
+from flask import Blueprint, request, current_app, send_file, send_from_directory
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from io import BytesIO
+import os
 
 files_bp = Blueprint('files', __name__)
 
@@ -233,3 +234,10 @@ def download_file(file_id):
         )
     except Exception as e:
         return {"error": f"Failed to download file: {str(e)}"}, 500
+
+
+@files_bp.route('/uploads/<path:filepath>')
+def serve_uploads(filepath):
+    """Serve uploaded files from the uploads directory."""
+    upload_dir = os.path.join(current_app.root_path, '..', 'uploads')
+    return send_from_directory(upload_dir, filepath)

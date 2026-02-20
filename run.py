@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask
 from flask_cors import CORS
 from pymongo import MongoClient
 
@@ -53,12 +53,6 @@ def create_app():
             file_service.download_default_files(uploads_path)
         except Exception as e:
             print(f"⚠ Warning: Failed to initialize default files: {e}")
-    
-    # Serve uploaded files
-    @app.route('/uploads/<path:filepath>')
-    def serve_uploads(filepath):
-        upload_dir = os.path.join(app.root_path, '..', 'uploads')
-        return send_from_directory(upload_dir, filepath)
     
     return app
 
