@@ -23,5 +23,5 @@ EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_DEBUG=False
 
-# Run the application with gunicorn using factory pattern
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--factory", "run:create_app"]
+# Run the application with gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "wsgi:app"]
