@@ -13,7 +13,7 @@ class Garment(ABC):
         name: str,
         created_by: str,
         gender: str,
-        type: str,
+        style: str,
         reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
         **kwargs
@@ -25,7 +25,7 @@ class Garment(ABC):
             name: Name of the garment
             created_by: User ID who created this garment
             gender: Target gender ('male', 'female', 'unisex')
-            type: Genre or category (e.g., 'streetwear', 'formal', 'casual', etc.)
+            style: Genre or category (e.g., 'streetwear', 'formal', 'casual', etc.)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
             **kwargs: Additional attributes specific to garment type
@@ -33,7 +33,7 @@ class Garment(ABC):
         self.name = name
         self.created_by = created_by
         self.gender = gender
-        self.type = type
+        self.style = style
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
 

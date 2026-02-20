@@ -10,7 +10,6 @@ class Outfit:
 		self,
 		name: str,
 		user_id: str,
-		style: Optional[str] = None,
 		bio: Optional[str] = None,
 		hat: Optional[Hat] = None,
 		shirt: Optional[Shirt] = None,
@@ -25,7 +24,6 @@ class Outfit:
 		Args:
 			name: Outfit name
 			user_id: User ID who created this outfit
-			style: Style/genre of the outfit
 			bio: Outfit description/bio
 			hat: Hat garment instance
 			shirt: Shirt garment instance
@@ -36,7 +34,6 @@ class Outfit:
 		"""
 		self.name = name
 		self.user_id = user_id
-		self.style = style
 		self.bio = bio
 		self.hat = hat
 		self.shirt = shirt
@@ -55,7 +52,6 @@ class Outfit:
 		return Outfit(
 			name=payload.get('name'),
 			user_id=payload.get('user_id'),
-			style=payload.get('style'),
 			bio=payload.get('bio'),
 			hat=Hat.from_dict(payload.get('hat')) if payload.get('hat') else None,
 			shirt=Shirt.from_dict(payload.get('shirt')) if payload.get('shirt') else None,
@@ -74,7 +70,6 @@ class Outfit:
 		outfit = Outfit(
 			name=outfit_doc.get('name'),
 			user_id=outfit_doc.get('user_id'),
-			style=outfit_doc.get('style'),
 			bio=outfit_doc.get('bio'),
 			hat=Hat.from_dict(outfit_doc.get('hat')) if outfit_doc.get('hat') else None,
 			shirt=Shirt.from_dict(outfit_doc.get('shirt')) if outfit_doc.get('shirt') else None,
@@ -92,7 +87,6 @@ class Outfit:
 			'id': str(self._id) if self._id else None,
 			'name': self.name,
 			'user_id': self.user_id,
-			'style': self.style,
 			'bio': self.bio,
 			'hat': self.hat.to_dict() if self.hat else None,
 			'shirt': self.shirt.to_dict() if self.shirt else None,
