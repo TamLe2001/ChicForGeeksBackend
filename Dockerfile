@@ -21,6 +21,7 @@ EXPOSE 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV FLASK_DEBUG=False
 
-# Run the application
-CMD ["python", "run.py"]
+# Run the application with gunicorn for production
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "run:app"]

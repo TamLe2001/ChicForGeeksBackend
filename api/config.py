@@ -16,7 +16,7 @@ class Config:
 		os.getenv('MONGO_DEV_URI', 'mongodb+srv://tamleop_db_user:KS5HTLYIlZGLxHL7@chicforgeeks.x24vfql.mongodb.net/')
 		if DEBUG else os.getenv('MONGO_URI', 'mongodb://100.125.204.48:27017/')
 	)
-	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'chicforgeeks')
+	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'database')
 
 	# NextCloud settings
 	NEXTCLOUD_URL = os.getenv('NEXTCLOUD_URL')
