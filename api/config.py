@@ -24,6 +24,13 @@ class Config:
 	MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 	ALLOWED_EXTENSIONS = {'glb', 'gltf'}
 
+	# CORS settings
+	CORS_ORIGINS = [
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+		"http://85.191.37.69:3000"
+	]
+
 	# Meshy settings
 	MESHY_API_KEY = os.getenv('MESHY_API_KEY')
 	INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY')

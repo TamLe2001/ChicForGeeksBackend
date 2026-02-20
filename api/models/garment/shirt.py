@@ -16,7 +16,7 @@ class Shirt(Garment):
     def from_dict(data: Dict[str, Any]) -> "Shirt":
         return Shirt(
             name=data.get("name"),
-            created_by=data.get("created_by"),
+            user_id=data.get("user_id"),
             gender=data.get("gender"),
             reference=data.get("reference"),
             style=data.get("style"),

@@ -11,7 +11,7 @@ class Garment(ABC):
     def __init__(
         self,
         name: str,
-        created_by: str,
+        user_id: str,
         gender: str,
         style: str,
         reference: Optional[str] = None,
@@ -23,7 +23,7 @@ class Garment(ABC):
 
         Args:
             name: Name of the garment
-            created_by: User ID who created this garment
+            user_id: User ID who created this garment
             gender: Target gender ('male', 'female', 'unisex')
             style: Genre or category (e.g., 'streetwear', 'formal', 'casual', etc.)
             reference: Reference URL or path to the garment model
@@ -31,16 +31,25 @@ class Garment(ABC):
             **kwargs: Additional attributes specific to garment type
         """
         self.name = name
-        self.created_by = created_by
+        self.user_id = user_id
         self.gender = gender
         self.style = style
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
+        self._id = None  # Set by database
 
-    @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         """Convert garment to dictionary for database storage."""
-        pass
+        return {
+            "id": str(self._id) if self._id else None,
+            "type": self.get_type(),
+            "name": self.name,
+            "user_id": self.user_id,
+            "gender": self.gender,
+            "style": self.style,
+            "reference": self.reference,
+            "created_at": self.created_at,
+        }
 
     @abstractmethod
     def get_type(self) -> str:
