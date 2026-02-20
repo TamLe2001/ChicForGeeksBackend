@@ -1,7 +1,7 @@
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
 
-from api.models.outfit import normalize_outfit_payload, serialize_outfit
+from api.models.outfit import Outfit
 from api.routes.auth import token_required
 
 outfits_bp = Blueprint('outfits', __name__)
@@ -13,7 +13,7 @@ def list_outfits():
 	query = {'user_id': user_id} if user_id else {}
 
 	outfits = current_app.db.outfits.find(query).sort('created_at', -1)
-	return jsonify([serialize_outfit(o) for o in outfits]), 200
+	return jsonify([Outfit.from_doc(o).to_dict() for o in outfits]), 200
 
 
 @outfits_bp.post('/outfits')
@@ -27,11 +27,22 @@ def create_outfit():
 	user_id = str(g.current_user.get('_id'))
 	payload['user_id'] = user_id
 
-	outfit_doc = normalize_outfit_payload(payload)
+	outfit = Outfit.from_payload(payload)
+	outfit_doc = {
+		'name': outfit.name,
+		'user_id': outfit.user_id,
+		'bio': outfit.bio,
+		'hat': outfit.hat.to_dict() if outfit.hat else None,
+		'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
+		'pants': outfit.pants.to_dict() if outfit.pants else None,
+		'shoes': outfit.shoes.to_dict() if outfit.shoes else None,
+		'published': outfit.published,
+		'created_at': outfit.created_at,
+	}
 	result = current_app.db.outfits.insert_one(outfit_doc)
 
 	created = current_app.db.outfits.find_one({'_id': result.inserted_id})
-	return jsonify(serialize_outfit(created)), 201
+	return jsonify(Outfit.from_doc(created).to_dict()), 201
 
 
 @outfits_bp.get('/outfits/<outfit_id>')
@@ -46,7 +57,7 @@ def get_outfit(outfit_id):
 	if not outfit:
 		return jsonify({'error': 'outfit not found'}), 404
 
-	return jsonify(serialize_outfit(outfit)), 200
+	return jsonify(Outfit.from_doc(outfit).to_dict()), 200
 
 
 @outfits_bp.put('/outfits/<outfit_id>')
@@ -78,7 +89,7 @@ def update_outfit(outfit_id):
 		return jsonify({'error': 'outfit not found'}), 404
 
 	outfit = current_app.db.outfits.find_one({'_id': oid})
-	return jsonify(serialize_outfit(outfit)), 200
+	return jsonify(Outfit.from_doc(outfit).to_dict()), 200
 
 
 @outfits_bp.delete('/outfits/<outfit_id>')

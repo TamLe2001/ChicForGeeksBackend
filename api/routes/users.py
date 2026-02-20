@@ -1,7 +1,7 @@
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request
 
-from api.models.user import normalize_user_payload, serialize_user
+from api.models.user import User
 from api.routes.auth import token_required
 
 users_bp = Blueprint('users', __name__)
@@ -11,7 +11,7 @@ users_bp = Blueprint('users', __name__)
 @token_required
 def list_users():
 	users = current_app.db.users.find().sort('created_at', -1)
-	return jsonify([serialize_user(u) for u in users]), 200
+	return jsonify([User.from_doc(u).to_dict() for u in users]), 200
 
 
 @users_bp.post('/users')
@@ -22,11 +22,20 @@ def create_user():
 	if not payload.get('name') or not payload.get('email'):
 		return jsonify({'error': 'name and email are required'}), 400
 
-	user_doc = normalize_user_payload(payload)
+	user = User.from_payload(payload)
+	
+	user_doc = {
+		'name': user.name,
+		'email': user.email,
+		'profile_picture': user.profile_picture,
+		'bio': user.bio,
+		'birthday': user.birthday,
+		'created_at': user.created_at,
+	}
+	
 	result = current_app.db.users.insert_one(user_doc)
-
 	created = current_app.db.users.find_one({'_id': result.inserted_id})
-	return jsonify(serialize_user(created)), 201
+	return jsonify(User.from_doc(created).to_dict()), 201
 
 
 @users_bp.get('/users/<user_id>')
@@ -41,7 +50,7 @@ def get_user(user_id):
 	if not user:
 		return jsonify({'error': 'user not found'}), 404
 
-	return jsonify(serialize_user(user)), 200
+	return jsonify(User.from_doc(user).to_dict()), 200
 
 @users_bp.put('/users/<user_id>')
 @token_required
@@ -62,7 +71,7 @@ def update_user(user_id):
 		return jsonify({'error': 'user not found'}), 404
 
 	user = current_app.db.users.find_one({'_id': oid})
-	return jsonify(serialize_user(user)), 200
+	return jsonify(User.from_doc(user).to_dict()), 200
 
 
 @users_bp.delete('/users/<user_id>')

@@ -1,6 +1,7 @@
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
 
+from api.models.user import User
 from api.routes.auth import token_required
 
 follows_bp = Blueprint('follows', __name__)
@@ -96,8 +97,7 @@ def get_followers():
 		for fid in follower_ids
 	]
 
-	from api.models.user import serialize_user
-	return jsonify([serialize_user(u) for u in follower_users if u]), 200
+	return jsonify([User.from_doc(u).to_dict() for u in follower_users if u]), 200
 
 
 @follows_bp.get('/follows/following')
@@ -123,8 +123,7 @@ def get_following():
 		for fid in following_ids
 	]
 
-	from api.models.user import serialize_user
-	return jsonify([serialize_user(u) for u in following_users if u]), 200
+	return jsonify([User.from_doc(u).to_dict() for u in following_users if u]), 200
 
 
 @follows_bp.get('/follows/is-following/<target_user_id>')

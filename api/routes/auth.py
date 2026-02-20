@@ -5,7 +5,7 @@ import jwt
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
 
-from api.models.user import hash_password, serialize_user, verify_password
+from api.models.user import User
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -89,22 +89,33 @@ def register():
 	if current_app.db.users.find_one({'email': email}):
 		return jsonify({'error': 'email already registered'}), 409
 
+	# Create user instance
+	user = User(
+		name=name,
+		email=email,
+		profile_picture=payload.get('profile_picture'),
+		bio=payload.get('bio', ''),
+		birthday=payload.get('birthday'),
+	)
+	user.set_password(password)
+
 	user_doc = {
-		'name': name,
-		'email': email,
-		'password_hash': hash_password(password),
+		'name': user.name,
+		'email': user.email,
+		'password_hash': user.password_hash,
 		'role': payload.get('role', 'user'),
-		'profile_picture': payload.get('profile_picture'),
-		'bio': payload.get('bio', ''),
-		'birthday': payload.get('birthday'),
-		'created_at': datetime.now(timezone.utc),
+		'profile_picture': user.profile_picture,
+		'bio': user.bio,
+		'birthday': user.birthday,
+		'created_at': user.created_at,
 	}
 
 	result = current_app.db.users.insert_one(user_doc)
 	created = current_app.db.users.find_one({'_id': result.inserted_id})
 
 	token = _generate_token(created)
-	return jsonify({'token': token, 'user': serialize_user(created)}), 201
+	created_user = User.from_doc(created)
+	return jsonify({'token': token, 'user': created_user.to_dict()}), 201
 
 
 @auth_bp.post('/auth/login')
@@ -116,15 +127,20 @@ def login():
 	if not email or not password:
 		return jsonify({'error': 'email and password are required'}), 400
 
-	user = current_app.db.users.find_one({'email': email})
-	if not user or not verify_password(password, user.get('password_hash', '')):
+	user_doc = current_app.db.users.find_one({'email': email})
+	if not user_doc:
 		return jsonify({'error': 'invalid credentials'}), 401
 
-	token = _generate_token(user)
-	return jsonify({'token': token, 'user': serialize_user(user)}), 200
+	user = User.from_doc(user_doc)
+	if not user.verify_password(password):
+		return jsonify({'error': 'invalid credentials'}), 401
+
+	token = _generate_token(user_doc)
+	return jsonify({'token': token, 'user': user.to_dict()}), 200
 
 
 @auth_bp.get('/auth/me')
 @token_required
 def me():
-	return jsonify(serialize_user(g.current_user)), 200
+	current_user = User.from_doc(g.current_user)
+	return jsonify(current_user.to_dict()), 200
