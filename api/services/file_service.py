@@ -21,7 +21,17 @@ class FileService:
         """
         self.db = db
         self.config = config
-        self.nextcloud_url = config.get('NEXTCLOUD_URL')
+        self.nextcloud_url = self._normalize_base_url(config.get('NEXTCLOUD_URL'))
+        self.nextcloud_user = config.get('NEXTCLOUD_USER')
+        self.nextcloud_pass = config.get('NEXTCLOUD_PASS')
+
+    @staticmethod
+    def _normalize_base_url(url: Optional[str]) -> Optional[str]:
+        """Ensure base URL ends with a slash for safe joining."""
+        if not url:
+            return None
+			
+        return url if url.endswith('/') else f"{url}/"
 
     def download_default_files(self, uploads_base_path: str) -> None:
         """
@@ -70,7 +80,11 @@ class FileService:
             url: URL to download zip file from
             target_dir: Directory to extract files to
         """
-        response = requests.get(url, timeout=30)
+        auth = None
+        if self.nextcloud_user and self.nextcloud_pass:
+            auth = (self.nextcloud_user, self.nextcloud_pass)
+
+        response = requests.get(url, timeout=30, auth=auth)
         response.raise_for_status()
 
         with zipfile.ZipFile(BytesIO(response.content)) as zip_file:

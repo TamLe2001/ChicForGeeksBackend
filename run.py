@@ -37,7 +37,7 @@ def create_app():
     }
     
     client = MongoClient(mongo_uri, **client_options)
-    app.db = client[app.config.get('MONGO_DB_NAME', 'chicforgeeks')]
+    app.db = client[app.config.get('MONGO_DB_NAME', 'database')]
 
     # Register error handlers
     handle_errors(app)
@@ -63,4 +63,5 @@ if __name__ == '__main__':
     debug = app.config.get('DEBUG', False)
     print(f"\n🚀 Starting server on http://0.0.0.0:{port}")
     print(f"📝 Debug mode: {debug}\n")
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    print(f"Mongodb is connected to: {app.config.get('MONGO_URI')} - {app.config.get('MONGO_DB_NAME')}\n")
+    app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=False)
