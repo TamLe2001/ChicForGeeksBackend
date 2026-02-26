@@ -14,7 +14,7 @@ class Config:
 	# MongoDB settings - use dev URI in debug mode, prod URI in production
 	MONGO_URI = (
 		os.getenv('MONGO_DEV_URI', 'mongodb+srv://tamleop_db_user:KS5HTLYIlZGLxHL7@chicforgeeks.x24vfql.mongodb.net/')
-		if DEBUG else os.getenv('MONGO_URI', 'mongodb://100.125.204.48:27017/')
+		if DEBUG else os.getenv('MONGO_URI', 'mongodb://100.72.127.91:27017/')
 	)
 	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'database')
 
