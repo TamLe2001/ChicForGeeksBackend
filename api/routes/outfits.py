@@ -1,10 +1,82 @@
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
+from datetime import datetime
+import os
 
 from api.models.outfit import Outfit
 from api.routes.auth import token_required
 
 outfits_bp = Blueprint('outfits', __name__)
+
+
+def allowed_file(filename):
+	"""Check if file extension is allowed for GLB files"""
+	allowed_ext = {'glb', 'gltf'}
+	return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_ext
+
+
+@outfits_bp.post('/outfits/default')
+def upload_default_outfit():
+	"""Upload GLB files for default outfits"""
+	try:
+		# Validate file presence
+		if 'file' not in request.files:
+			return jsonify({'error': 'No file provided'}), 400
+		
+		file = request.files['file']
+		
+		if file.filename == '':
+			return jsonify({'error': 'No file selected'}), 400
+		
+		if not allowed_file(file.filename):
+			return jsonify({'error': 'Only GLB/GLTF files allowed'}), 400
+		
+		# Get category from request
+		category = request.form.get('category') or request.args.get('category')
+		
+		if not category:
+			return jsonify({'error': 'category is required (shirt, hat, pants, shoes)'}), 400
+		
+		valid_categories = {'shirt', 'hat', 'pants', 'shoes'}
+		if category.lower() not in valid_categories:
+			return jsonify({'error': f'Invalid category. Must be one of: {", ".join(valid_categories)}'}), 400
+		
+		# Check file size (max 100MB)
+		max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
+		if file.content_length and file.content_length > max_size:
+			return jsonify({'error': 'File too large (max 100MB)'}), 413
+		
+		# Save file to local uploads/default directory
+		upload_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default', category.lower())
+		os.makedirs(upload_dir, exist_ok=True)
+		
+		file_path = os.path.join(upload_dir, file.filename)
+		file.save(file_path)
+		
+		# Save metadata to MongoDB
+		file_doc = {
+			'filename': file.filename,
+			'user_id': 'default',
+			'category': category.lower(),
+			'file_path': file_path,
+			'size': os.path.getsize(file_path),
+			'content_type': file.content_type or 'application/octet-stream',
+			'uploaded_at': datetime.utcnow()
+		}
+		
+		result = current_app.db.files.insert_one(file_doc)
+		
+		return jsonify({
+			'status': 'success',
+			'message': 'Default outfit file uploaded successfully',
+			'file_id': str(result.inserted_id),
+			'filename': file.filename,
+			'category': category.lower(),
+			'file_path': file_path
+		}), 201
+		
+	except Exception as e:
+		return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
 @outfits_bp.get('/outfits')
