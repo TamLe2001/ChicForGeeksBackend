@@ -9,62 +9,32 @@ from api.routes.auth import token_required
 outfits_bp = Blueprint('outfits', __name__)
 
 
-@outfits_bp.get('/outfits/default')
+@outfits_bp.get('/default-outfits')
 def get_default_outfits():
-	"""Get list of default GLB files or serve a specific file"""
+	"""Get all default GLB files from uploads/default directory"""
 	try:
-		# Check if requesting a specific file
-		filename = request.args.get('filename')
-		category = request.args.get('category')
-		
 		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
-		
-		# If filename is provided, serve the file
-		if filename:
-			if category:
-				file_path = os.path.join(uploads_dir, category.lower(), filename)
-			else:
-				file_path = os.path.join(uploads_dir, filename)
-			
-			if os.path.exists(file_path):
-				directory = os.path.dirname(file_path)
-				filename_only = os.path.basename(file_path)
-				return send_from_directory(directory, filename_only)
-			else:
-				return jsonify({'error': 'File not found'}), 404
-		
-		# Otherwise, return list of available files
 		files_list = []
 		valid_extensions = {'.glb', '.gltf'}
 		
-		# Filter by category if provided
-		if category:
-			category_dir = os.path.join(uploads_dir, category.lower())
-			if os.path.exists(category_dir):
-				for filename in os.listdir(category_dir):
-					if any(filename.lower().endswith(ext) for ext in valid_extensions):
-						file_path = os.path.join(category_dir, filename)
-						files_list.append({
-							'filename': filename,
-							'category': category.lower(),
-							'size': os.path.getsize(file_path),
-							'url': f'/outfits/default?category={category.lower()}&filename={filename}'
-						})
-		else:
-			# List all default files from all categories
-			if os.path.exists(uploads_dir):
-				for category_name in os.listdir(uploads_dir):
-					category_path = os.path.join(uploads_dir, category_name)
-					if os.path.isdir(category_path):
-						for filename in os.listdir(category_path):
-							if any(filename.lower().endswith(ext) for ext in valid_extensions):
-								file_path = os.path.join(category_path, filename)
-								files_list.append({
-									'filename': filename,
-									'category': category_name,
-									'size': os.path.getsize(file_path),
-									'url': f'/outfits/default?category={category_name}&filename={filename}'
-								})
+		if not os.path.exists(uploads_dir):
+			return jsonify({
+				'status': 'success',
+				'count': 0,
+				'files': []
+			}), 200
+		
+		# Recursively find all GLB/GLTF files in uploads/default
+		for root, dirs, files in os.walk(uploads_dir):
+			for filename in files:
+				if any(filename.lower().endswith(ext) for ext in valid_extensions):
+					file_path = os.path.join(root, filename)
+					relative_path = os.path.relpath(file_path, uploads_dir)
+					files_list.append({
+						'filename': filename,
+						'path': relative_path.replace('\\', '/'),
+						'size': os.path.getsize(file_path)
+					})
 		
 		return jsonify({
 			'status': 'success',
