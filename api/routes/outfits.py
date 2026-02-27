@@ -1,7 +1,9 @@
 from bson import ObjectId
-from flask import Blueprint, current_app, g, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, g, jsonify, request, send_from_directory, send_file
 from datetime import datetime
 import os
+import zipfile
+from io import BytesIO
 
 from api.models.outfit import Outfit
 from api.routes.auth import token_required
@@ -11,36 +13,36 @@ outfits_bp = Blueprint('outfits', __name__)
 
 @outfits_bp.get('/default-outfits')
 def get_default_outfits():
-	"""Get all default GLB files from uploads/default directory"""
+	"""Download all default GLB files as a zip from uploads/default directory"""
 	try:
 		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
-		files_list = []
-		valid_extensions = {'.glb', '.gltf'}
 		
 		if not os.path.exists(uploads_dir):
-			return jsonify({
-				'status': 'success',
-				'count': 0,
-				'files': []
-			}), 200
+			return jsonify({'error': 'Default files directory not found'}), 404
 		
-		# Recursively find all GLB/GLTF files in uploads/default
-		for root, dirs, files in os.walk(uploads_dir):
-			for filename in files:
-				if any(filename.lower().endswith(ext) for ext in valid_extensions):
-					file_path = os.path.join(root, filename)
-					relative_path = os.path.relpath(file_path, uploads_dir)
-					files_list.append({
-						'filename': filename,
-						'path': relative_path.replace('\\', '/'),
-						'size': os.path.getsize(file_path)
-					})
+		# Create a zip file in memory
+		memory_file = BytesIO()
+		valid_extensions = {'.glb', '.gltf'}
 		
-		return jsonify({
-			'status': 'success',
-			'count': len(files_list),
-			'files': files_list
-		}), 200
+		with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+			# Add all GLB/GLTF files to the zip
+			for root, dirs, files in os.walk(uploads_dir):
+				for filename in files:
+					if any(filename.lower().endswith(ext) for ext in valid_extensions):
+						file_path = os.path.join(root, filename)
+						# Store with relative path to maintain folder structure
+						arcname = os.path.relpath(file_path, uploads_dir)
+						zipf.write(file_path, arcname)
+		
+		# Seek to the beginning of the BytesIO object
+		memory_file.seek(0)
+		
+		return send_file(
+			memory_file,
+			mimetype='application/zip',
+			as_attachment=True,
+			download_name='default-outfits.zip'
+		)
 		
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
