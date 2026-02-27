@@ -29,7 +29,7 @@ def get_default_garments(garment_name):
 			return jsonify({'error': 'Default files directory not found'}), 404
 		
 		# Search for the file in uploads/default directory
-		for root, files in os.walk(uploads_dir):
+		for root, dirs, files in os.walk(uploads_dir):
 			for filename in files:
 				# Match the garment name (with or without .glb extension)
 				if filename == garment_name or filename == f"{garment_name}.glb" or filename == f"{garment_name}.gltf":
