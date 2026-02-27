@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request, send_from_directory
 from datetime import datetime
 import os
 
@@ -9,47 +9,68 @@ from api.routes.auth import token_required
 outfits_bp = Blueprint('outfits', __name__)
 
 
-def allowed_file(filename):
-	"""Check if file extension is allowed for GLB files"""
-	allowed_ext = {'glb', 'gltf'}
-	return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_ext
-
-
-@outfits_bp.post('/outfits/default')
-def upload_default_outfit():
-	"""Upload GLB files for default outfits"""
+@outfits_bp.get('/outfits/default')
+def get_default_outfits():
+	"""Get list of default GLB files or serve a specific file"""
 	try:
-		# Validate file presence
-		if 'file' not in request.files:
-			return jsonify({'error': 'No file provided'}), 400
+		# Check if requesting a specific file
+		filename = request.args.get('filename')
+		category = request.args.get('category')
 		
-		file = request.files['file']
+		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
 		
-		if file.filename == '':
-			return jsonify({'error': 'No file selected'}), 400
+		# If filename is provided, serve the file
+		if filename:
+			if category:
+				file_path = os.path.join(uploads_dir, category.lower(), filename)
+			else:
+				file_path = os.path.join(uploads_dir, filename)
+			
+			if os.path.exists(file_path):
+				directory = os.path.dirname(file_path)
+				filename_only = os.path.basename(file_path)
+				return send_from_directory(directory, filename_only)
+			else:
+				return jsonify({'error': 'File not found'}), 404
 		
-		if not allowed_file(file.filename):
-			return jsonify({'error': 'Only GLB/GLTF files allowed'}), 400
+		# Otherwise, return list of available files
+		files_list = []
+		valid_extensions = {'.glb', '.gltf'}
 		
-		# Check file size (max 1GB)
-		max_size = current_app.config.get('MAX_FILE_SIZE', 1024 * 1024 * 1024)
-		if file.content_length and file.content_length > max_size:
-			return jsonify({'error': 'File too large (max 1GB)'}), 413
-		
-		# Save file to local uploads/default directory
-		upload_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
-		os.makedirs(upload_dir, exist_ok=True)
-		
-		file_path = os.path.join(upload_dir, file.filename)
-		file.save(file_path)
-	
+		# Filter by category if provided
+		if category:
+			category_dir = os.path.join(uploads_dir, category.lower())
+			if os.path.exists(category_dir):
+				for filename in os.listdir(category_dir):
+					if any(filename.lower().endswith(ext) for ext in valid_extensions):
+						file_path = os.path.join(category_dir, filename)
+						files_list.append({
+							'filename': filename,
+							'category': category.lower(),
+							'size': os.path.getsize(file_path),
+							'url': f'/outfits/default?category={category.lower()}&filename={filename}'
+						})
+		else:
+			# List all default files from all categories
+			if os.path.exists(uploads_dir):
+				for category_name in os.listdir(uploads_dir):
+					category_path = os.path.join(uploads_dir, category_name)
+					if os.path.isdir(category_path):
+						for filename in os.listdir(category_path):
+							if any(filename.lower().endswith(ext) for ext in valid_extensions):
+								file_path = os.path.join(category_path, filename)
+								files_list.append({
+									'filename': filename,
+									'category': category_name,
+									'size': os.path.getsize(file_path),
+									'url': f'/outfits/default?category={category_name}&filename={filename}'
+								})
 		
 		return jsonify({
 			'status': 'success',
-			'message': 'Default outfit file uploaded successfully',
-			'filename': file.filename,
-			'file_path': file_path
-		}), 201
+			'count': len(files_list),
+			'files': files_list
+		}), 200
 		
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
