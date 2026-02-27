@@ -9,7 +9,5 @@ class Style(str, Enum):
     FORMAL = "formal"
     CASUAL = "casual"
     SPORTY = "sporty"
-    VINTAGE = "vintage"
-    BOHEMIAN = "bohemian"
     PREPPY = "preppy"
-    GRUNGE = "grunge"
+    Y2K = "y2k"

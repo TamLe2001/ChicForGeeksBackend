@@ -4,6 +4,12 @@ from flask import Blueprint, current_app, g, jsonify, request
 from api.models.garment import Shirt, Pants, Hat, Shoes
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
+from flask import Blueprint, current_app, g, jsonify, request, send_file
+import os
+import zipfile
+from io import BytesIO
+
+from api.routes.auth import token_required
 
 garments_bp = Blueprint("garments", __name__)
 
@@ -12,6 +18,34 @@ def _get_garment_service() -> GarmentService:
     """Get or create garment service instance."""
     return GarmentService(current_app.db)
 
+
+@garments_bp.get('/default-garments/<garment_name>')
+def get_default_garments(garment_name):
+	"""Download a specific default GLB file from uploads/default directory"""
+	try:
+		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
+		
+		if not os.path.exists(uploads_dir):
+			return jsonify({'error': 'Default files directory not found'}), 404
+		
+		# Search for the file in uploads/default directory
+		for root, files in os.walk(uploads_dir):
+			for filename in files:
+				# Match the garment name (with or without .glb extension)
+				if filename == garment_name or filename == f"{garment_name}.glb" or filename == f"{garment_name}.gltf":
+					file_path = os.path.join(root, filename)
+					return send_file(
+						file_path,
+						mimetype='model/gltf-binary',
+						as_attachment=True,
+						download_name=filename
+					)
+		
+		return jsonify({'error': f'Garment file "{garment_name}" not found'}), 404
+		
+	except Exception as e:
+		return jsonify({'error': f'Server error: {str(e)}'}), 500
+     
 
 @garments_bp.post("/garments")
 @token_required

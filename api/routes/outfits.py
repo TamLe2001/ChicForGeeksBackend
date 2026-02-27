@@ -11,43 +11,6 @@ from api.routes.auth import token_required
 outfits_bp = Blueprint('outfits', __name__)
 
 
-@outfits_bp.get('/default-outfits')
-def get_default_outfits():
-	"""Download all default GLB files as a zip from uploads/default directory"""
-	try:
-		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
-		
-		if not os.path.exists(uploads_dir):
-			return jsonify({'error': 'Default files directory not found'}), 404
-		
-		# Create a zip file in memory
-		memory_file = BytesIO()
-		valid_extensions = {'.glb', '.gltf'}
-		
-		with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-			# Add all GLB/GLTF files to the zip
-			for root, dirs, files in os.walk(uploads_dir):
-				for filename in files:
-					if any(filename.lower().endswith(ext) for ext in valid_extensions):
-						file_path = os.path.join(root, filename)
-						# Store with relative path to maintain folder structure
-						arcname = os.path.relpath(file_path, uploads_dir)
-						zipf.write(file_path, arcname)
-		
-		# Seek to the beginning of the BytesIO object
-		memory_file.seek(0)
-		
-		return send_file(
-			memory_file,
-			mimetype='application/zip',
-			as_attachment=True,
-			download_name='default-outfits.zip'
-		)
-		
-	except Exception as e:
-		return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-
 @outfits_bp.get('/outfits')
 def list_outfits():
 	user_id = request.args.get('user_id')
