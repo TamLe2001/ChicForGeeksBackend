@@ -17,7 +17,7 @@ def _get_garment_service() -> GarmentService:
     return GarmentService(current_app.db)
 
 
-@garments_bp.get('/default-garments')
+@garments_bp.get('/default')
 def get_default_garments():
 	"""Download the entire default directory as a zip file from NextCloud"""
 	try:
@@ -32,7 +32,7 @@ def get_default_garments():
 		# Construct the URL to download default directory as zip
 		# Remove trailing slash from nextcloud_url if present
 		nextcloud_url = nextcloud_url.rstrip('/')
-		download_url = f"{nextcloud_url}/default/?accept=zip"
+		download_url = f"{nextcloud_url}/default/?accept=zip&files=%5B%22avatar_female.glb%22%2C%22avatar_male.glb%22%2C%22pants_baggy_denim_female.glb%22%2C%22pants_leggings_female.glb%22%2C%22pants_male_black.glb%22%2C%22pants_male_denim.glb%22%2C%22tshirt_fitted_female_black.glb%22%2C%22tshirt_fitted_female_white.glb%22%2C%22tshirt_male_white.glb%22%2C%22tshirt_male_yellow.glb%22%5D"
 		
 		# Make authenticated request to NextCloud
 		response = requests.get(
@@ -53,7 +53,7 @@ def get_default_garments():
 			zip_data,
 			mimetype='application/zip',
 			as_attachment=True,
-			download_name='default-garments.zip'
+			download_name='default.zip'
 		)
 		
 	except Exception as e:
