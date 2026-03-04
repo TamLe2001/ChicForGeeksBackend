@@ -1,15 +1,13 @@
 """Routes for garment management."""
 
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request, send_file
 from api.models.garment import Shirt, Pants, Hat, Shoes
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
-from flask import Blueprint, current_app, g, jsonify, request, send_file
 import os
 import zipfile
 from io import BytesIO
-
-from api.routes.auth import token_required
+import requests
 
 garments_bp = Blueprint("garments", __name__)
 
@@ -19,29 +17,44 @@ def _get_garment_service() -> GarmentService:
     return GarmentService(current_app.db)
 
 
-@garments_bp.get('/default-garments/<garment_name>')
-def get_default_garments(garment_name):
-	"""Download a specific default GLB file from uploads/default directory"""
+@garments_bp.get('/default-garments')
+def get_default_garments():
+	"""Download the entire default directory as a zip file from NextCloud"""
 	try:
-		uploads_dir = os.path.join(current_app.root_path, '..', 'uploads', 'default')
+		# Get NextCloud credentials from environment
+		nextcloud_url = os.getenv('NEXTCLOUD_URL', '')
+		nextcloud_user = os.getenv('NEXTCLOUD_USER', '')
+		nextcloud_pass = os.getenv('NEXTCLOUD_PASS', '')
 		
-		if not os.path.exists(uploads_dir):
-			return jsonify({'error': 'Default files directory not found'}), 404
+		if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
+			return jsonify({'error': 'NextCloud configuration not found'}), 500
 		
-		# Search for the file in uploads/default directory
-		for root, dirs, files in os.walk(uploads_dir):
-			for filename in files:
-				# Match the garment name (with or without .glb extension)
-				if filename == garment_name or filename == f"{garment_name}.glb" or filename == f"{garment_name}.gltf":
-					file_path = os.path.join(root, filename)
-					return send_file(
-						file_path,
-						mimetype='model/gltf-binary',
-						as_attachment=True,
-						download_name=filename
-					)
+		# Construct the URL to download default directory as zip
+		# Remove trailing slash from nextcloud_url if present
+		nextcloud_url = nextcloud_url.rstrip('/')
+		download_url = f"{nextcloud_url}/default/?accept=zip"
 		
-		return jsonify({'error': f'Garment file "{garment_name}" not found'}), 404
+		# Make authenticated request to NextCloud
+		response = requests.get(
+			download_url,
+			auth=(nextcloud_user, nextcloud_pass),
+			stream=True
+		)
+		
+		if response.status_code != 200:
+			return jsonify({
+				'error': f'Failed to download from NextCloud: {response.status_code}'
+			}), response.status_code
+		
+		# Create a BytesIO object from the response content
+		zip_data = BytesIO(response.content)
+		
+		return send_file(
+			zip_data,
+			mimetype='application/zip',
+			as_attachment=True,
+			download_name='default-garments.zip'
+		)
 		
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
