@@ -5,7 +5,6 @@ from api.models.garment import Shirt, Pants, Hat, Shoes
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 import os
-import zipfile
 from io import BytesIO
 import requests
 
@@ -58,6 +57,7 @@ def get_default_garments():
 		
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
+     
      
 
 @garments_bp.post("/garments")
@@ -251,3 +251,54 @@ def delete_garment(garment_id):
         return jsonify({"status": "deleted"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@garments_bp.get('/default-glb/<file_name>')
+def download_from_cloud(file_name):
+	"""Download file directly from NextCloud default folder"""
+	try:
+		# Get NextCloud credentials from environment
+		nextcloud_url = os.getenv('NEXTCLOUD_URL', '')
+		nextcloud_user = os.getenv('NEXTCLOUD_USER', '')
+		nextcloud_pass = os.getenv('NEXTCLOUD_PASS', '')
+		
+		if not nextcloud_url:
+			return jsonify({'error': 'NextCloud not configured'}), 500
+		
+		# Normalize URL to ensure it ends with slash
+		if not nextcloud_url.endswith('/'):
+			nextcloud_url = f"{nextcloud_url}/"
+		
+		# Construct cloud URL: {nextcloud_url}/default/{file_name}
+		cloud_url = f"{nextcloud_url}default/{file_name}"
+		
+		# Download file from NextCloud
+		auth = (nextcloud_user, nextcloud_pass) if nextcloud_user and nextcloud_pass else None
+		response = requests.get(
+			cloud_url,
+			auth=auth,
+			timeout=30
+		)
+		
+		if response.status_code == 404:
+			return jsonify({'error': 'File not found in cloud storage'}), 404
+		
+		if response.status_code != 200:
+			return jsonify({'error': f'Failed to download file from cloud: {response.status_code}'}), 500
+		
+		# Detect content type from response headers or filename
+		content_type = response.headers.get('Content-Type', 'application/octet-stream')
+		
+		# Return file as download
+		return send_file(
+			BytesIO(response.content),
+			mimetype=content_type,
+			as_attachment=True,
+			download_name=file_name
+		)
+	except requests.exceptions.Timeout:
+		return jsonify({'error': 'Download timeout - file may be too large or network issues'}), 504
+	except requests.exceptions.RequestException as e:
+		return jsonify({'error': f'Download failed: {str(e)}'}), 500
+	except Exception as e:
+		return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
