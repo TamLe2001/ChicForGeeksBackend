@@ -2,7 +2,7 @@
 
 from typing import Dict, Any
 
-from backend.api.models.garment.enums.gender import Gender
+from api.models.garment.enums.gender import Gender
 from .garment import Garment
 
 class Skirt(Garment):
