@@ -120,13 +120,16 @@ def register():
 @auth_bp.post('/auth/login')
 def login():
 	payload = request.get_json(silent=True) or {}
-	email = payload.get('email')
+	user_info = payload.get('user_info')
 	password = payload.get('password')
 
-	if not email or not password:
-		return jsonify({'error': 'email and password are required'}), 400
+	if not user_info or not password:
+		return jsonify({'error': 'username/email and password are required'}), 400
 
-	user_doc = current_app.db.users.find_one({'email': email})
+	user_doc_username = current_app.db.users.find_one({'name': user_info})
+	user_doc_email = current_app.db.users.find_one({'email': user_info})
+	user_doc = user_doc_username or user_doc_email
+
 	if not user_doc:
 		return jsonify({'error': 'invalid credentials'}), 401
 
