@@ -128,6 +128,7 @@ def delete_outfit(outfit_id):
 
 	current_app.db.likes.delete_many({'outfit_id': oid})
 	current_app.db.comments.delete_many({'outfit_id': oid})
+	current_app.db.wardrobes.update_many({}, {'$pull': {'outfit_ids': oid}})
 
 	return jsonify({'status': 'deleted'}), 200
 

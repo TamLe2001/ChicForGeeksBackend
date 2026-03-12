@@ -13,6 +13,8 @@ def ensure_indexes(db):
     """Create required MongoDB indexes."""
     db.users.create_index([('email', ASCENDING)], unique=True)
     db.outfits.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
+    db.wardrobes.create_index([('user_id', ASCENDING)], unique=True)
+    db.wardrobes.create_index([('outfit_ids', ASCENDING)])
     db.likes.create_index([('outfit_id', ASCENDING), ('user_id', ASCENDING)], unique=True)
     db.comments.create_index([('outfit_id', ASCENDING), ('created_at', DESCENDING)])
     db.comments.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
