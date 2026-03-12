@@ -11,10 +11,12 @@ class Config:
 	JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)
 	JWT_EXPIRES_MINUTES = int(os.getenv('JWT_EXPIRES_MINUTES', '60'))
 
-	# MongoDB settings - use dev URI in debug mode, prod URI in production
+	# MongoDB settings
+	# Priority: explicit MONGO_URI > MONGO_DEV_URI (for local/non-docker dev) > fallback
 	MONGO_URI = (
-		os.getenv('MONGO_DEV_URI', 'mongodb+srv://tamleop_db_user:KS5HTLYIlZGLxHL7@chicforgeeks.x24vfql.mongodb.net/')
-		if DEBUG else os.getenv('MONGO_URI', 'mongodb://100.72.127.91:27017/')
+		os.getenv('MONGO_URI')
+		or os.getenv('MONGO_DEV_URI')
+		or 'mongodb://mongo:27017/'
 	)
 	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'database')
 
