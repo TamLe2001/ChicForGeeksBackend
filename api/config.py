@@ -12,10 +12,12 @@ class Config:
 	JWT_EXPIRES_MINUTES = int(os.getenv('JWT_EXPIRES_MINUTES', '60'))
 
 	# MongoDB settings
-	# Priority: explicit MONGO_URI > MONGO_DEV_URI (for local/non-docker dev) > fallback
+	# In debug mode, force use of MONGO_DEV_URI
 	MONGO_URI = (
+		os.getenv('MONGO_DEV_URI')
+		or 'mongodb://mongo:27017/'
+	) if DEBUG else (
 		os.getenv('MONGO_URI')
-		or os.getenv('MONGO_DEV_URI')
 		or 'mongodb://mongo:27017/'
 	)
 	MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'database')
