@@ -128,7 +128,7 @@ def get_following():
 		return jsonify({'error': 'invalid user_id'}), 400
 
 	# Get all users that this user is following
-	following = list(current_app.db.follows.find({'follower_id': user_id}))
+	following = list(current_app.db.follows.find({'follower_id': user_id}).sort('created_at', -1))
 	followed_ids = [f.get('followed_id') or f.get('following_id') for f in following]
 	followed_object_ids = [ObjectId(fid) for fid in followed_ids if ObjectId.is_valid(fid)]
 
