@@ -1,10 +1,7 @@
 """Pants garment model."""
 
-from typing import Optional, Dict, Any
-from datetime import datetime
-
+from typing import Dict, Any
 from .garment import Garment
-
 
 class Pants(Garment):
     """Pants garment class."""

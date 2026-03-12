@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from .enums import Gender, Style
 
-
 class Garment(ABC):
     """Abstract base class for all garment types."""
 
@@ -64,6 +63,8 @@ class Garment(ABC):
         from .pants import Pants
         from .hat import Hat
         from .shoes import Shoes
+        from .skirt import Skirt
+        from .accessorie import Accessorie
 
         garment_type = data.get("type")
 
@@ -75,5 +76,9 @@ class Garment(ABC):
             return Hat.from_dict(data)
         elif garment_type == "shoes":
             return Shoes.from_dict(data)
+        elif garment_type == "skirt":
+            return Skirt.from_dict(data)
+        elif garment_type == "accessories":
+            return Accessorie.from_dict(data)
         else:
             raise ValueError(f"Unknown garment type: {garment_type}")

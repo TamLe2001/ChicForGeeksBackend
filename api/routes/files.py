@@ -38,9 +38,9 @@ def upload_to_cloud():
             return {"error": "user_id is required"}, 400
         
         if not category:
-            return {"error": "category is required (shirt, hat, pants, shoes)"}, 400
+            return {"error": "category is required (shirt, hat, pants, shoes, skirt, accessories)"}, 400
         
-        valid_categories = {'shirt', 'hat', 'pants', 'shoes'}
+        valid_categories = {'shirt', 'hat', 'pants', 'shoes', 'skirt', 'accessories'}
         if category.lower() not in valid_categories:
             return {"error": f"Invalid category. Must be one of: {', '.join(valid_categories)}"}, 400
         

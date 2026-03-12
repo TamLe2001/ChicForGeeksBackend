@@ -1,7 +1,7 @@
 """Routes for garment management."""
 
 from flask import Blueprint, current_app, g, jsonify, request, send_file
-from api.models.garment import Shirt, Pants, Hat, Shoes
+from api.models.garment import Shirt, Pants, Hat, Shoes, Skirt, Accessorie
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 import os
@@ -77,8 +77,9 @@ def create_garment():
         if garment_type == "shirt":
             garment = Shirt(
                 name=payload.get("name", "Untitled Shirt"),
-                created_by=user_id,
+                user_id=user_id,
                 gender=payload.get("gender", "unisex"),
+                style=payload.get("style", "casual"),
                 reference=payload.get("reference"),
                 sleeve_type=payload.get("sleeve_type", "short"),
                 color=payload.get("color"),
@@ -87,8 +88,9 @@ def create_garment():
         elif garment_type == "pants":
             garment = Pants(
                 name=payload.get("name", "Untitled Pants"),
-                created_by=user_id,
+                user_id=user_id,
                 gender=payload.get("gender", "unisex"),
+                style=payload.get("style", "casual"),
                 reference=payload.get("reference"),
                 fit=payload.get("fit", "regular"),
                 length=payload.get("length", "full"),
@@ -98,8 +100,9 @@ def create_garment():
         elif garment_type == "hat":
             garment = Hat(
                 name=payload.get("name", "Untitled Hat"),
-                created_by=user_id,
+                user_id=user_id,
                 gender=payload.get("gender", "unisex"),
+                style=payload.get("style", "casual"),
                 reference=payload.get("reference"),
                 hat_style=payload.get("hat_style", "baseball"),
                 color=payload.get("color"),
@@ -108,13 +111,36 @@ def create_garment():
         elif garment_type == "shoes":
             garment = Shoes(
                 name=payload.get("name", "Untitled Shoes"),
-                created_by=user_id,
+                user_id=user_id,
                 gender=payload.get("gender", "unisex"),
+                style=payload.get("style", "casual"),
                 reference=payload.get("reference"),
                 shoe_type=payload.get("shoe_type", "sneaker"),
                 color=payload.get("color"),
                 size_range=payload.get("size_range", "all"),
                 material=payload.get("material", "fabric"),
+            )
+        elif garment_type == "skirt":
+            garment = Skirt(
+                name=payload.get("name", "Untitled Skirt"),
+                user_id=user_id,
+                gender=payload.get("gender", "female"),
+                style=payload.get("style", "casual"),
+                reference=payload.get("reference"),
+                length=payload.get("length", "knee"),
+                color=payload.get("color"),
+                material=payload.get("material", "cotton"),
+            )
+        elif garment_type == "accessories":
+            garment = Accessorie(
+                name=payload.get("name", "Untitled Accessory"),
+                user_id=user_id,
+                gender=payload.get("gender", "unisex"),
+                style=payload.get("style", "casual"),
+                reference=payload.get("reference"),
+                accessory_type=payload.get("accessory_type", "generic"),
+                color=payload.get("color"),
+                material=payload.get("material", "mixed"),
             )
         else:
             return jsonify({"error": f"unknown garment type: {garment_type}"}), 400
@@ -196,7 +222,7 @@ def update_garment(garment_id):
         if not garment:
             return jsonify({"error": "garment not found"}), 404
 
-        if garment.created_by != user_id:
+        if garment.user_id != user_id:
             return jsonify({"error": "not authorized to update this garment"}), 403
 
         # Allowed fields to update based on garment type
@@ -244,7 +270,7 @@ def delete_garment(garment_id):
         if not garment:
             return jsonify({"error": "garment not found"}), 404
 
-        if garment.created_by != user_id:
+        if garment.user_id != user_id:
             return jsonify({"error": "not authorized to delete this garment"}), 403
 
         service.delete_garment(garment_id)

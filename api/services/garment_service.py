@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
-from api.models.garment import Garment, Shirt, Pants, Hat, Shoes
+from api.models.garment import Garment, Shirt, Pants, Hat, Shoes, Skirt, Accessorie
 
 
 class GarmentService:
@@ -58,7 +58,7 @@ class GarmentService:
         Get garments filtered by type and optionally by gender.
 
         Args:
-            garment_type: Type of garment ('shirt', 'pants', 'hat', 'shoes')
+            garment_type: Type of garment ('shirt', 'pants', 'hat', 'shoes', 'skirt', 'accessories')
             gender: Optional gender filter ('male', 'female', 'unisex')
 
         Returns:
@@ -86,7 +86,7 @@ class GarmentService:
             List of garments created by the user
         """
         docs = list(
-            self.collection.find({"created_by": creator_id}).sort(
+            self.collection.find({"user_id": creator_id}).sort(
                 "created_at", -1
             )
         )

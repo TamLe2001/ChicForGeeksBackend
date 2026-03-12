@@ -1,20 +1,22 @@
-"""Shoes garment model."""
+"""Skirt garment model."""
 
 from typing import Dict, Any
+
+from backend.api.models.garment.enums.gender import Gender
 from .garment import Garment
 
-class Shoes(Garment):
-    """Shoes garment class."""
+class Skirt(Garment):
+    """Skirt garment class."""
 
     def get_type(self) -> str:
-        return "shoes"
+        return "skirt"
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> "Shoes":
-        return Shoes(
+    def from_dict(data: Dict[str, Any]) -> "Skirt":
+        return Skirt(
             name=data.get("name"),
             user_id=data.get("user_id"),
-            gender=data.get("gender"),
+            gender= Gender.FEMALE,  # Skirts are typically associated with females
             style=data.get("style"),
             reference=data.get("reference"),
             created_at=data.get("created_at"),
