@@ -12,6 +12,9 @@ from api.services import FileService
 def ensure_indexes(db):
     """Create required MongoDB indexes."""
     db.users.create_index([('email', ASCENDING)], unique=True)
+    db.follows.create_index([('follower_id', ASCENDING), ('followed_id', ASCENDING)], unique=True)
+    db.follows.create_index([('followed_id', ASCENDING), ('created_at', DESCENDING)])
+    db.follows.create_index([('follower_id', ASCENDING), ('created_at', DESCENDING)])
     db.outfits.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
     db.wardrobes.create_index([('user_id', ASCENDING)], unique=True)
     db.wardrobes.create_index([('outfit_ids', ASCENDING)])
