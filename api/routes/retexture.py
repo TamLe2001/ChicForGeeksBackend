@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import requests
 from flask import Blueprint, current_app, jsonify, request
 

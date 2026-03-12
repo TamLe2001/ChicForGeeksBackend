@@ -1,6 +1,5 @@
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
-
 from api.models.user import User
 from api.routes.auth import token_required
 

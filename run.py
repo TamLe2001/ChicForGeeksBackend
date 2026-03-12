@@ -1,12 +1,21 @@
 import os
 from flask import Flask
 from flask_cors import CORS
-from pymongo import MongoClient
+from pymongo import ASCENDING, DESCENDING, MongoClient
 
 from api.config import Config
 from api.routes import register_blueprints
 from api.middleware.error_handler import handle_errors
 from api.services import FileService
+
+
+def ensure_indexes(db):
+    """Create required MongoDB indexes."""
+    db.users.create_index([('email', ASCENDING)], unique=True)
+    db.outfits.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
+    db.likes.create_index([('outfit_id', ASCENDING), ('user_id', ASCENDING)], unique=True)
+    db.comments.create_index([('outfit_id', ASCENDING), ('created_at', DESCENDING)])
+    db.comments.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
 
 
 def create_app():
@@ -38,6 +47,7 @@ def create_app():
     
     client = MongoClient(mongo_uri, **client_options)
     app.db = client[app.config.get('MONGO_DB_NAME', 'database')]
+    ensure_indexes(app.db)
 
     # Register error handlers
     handle_errors(app)

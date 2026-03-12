@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-
 import jwt
 from bson import ObjectId
 from flask import Blueprint, current_app, g, jsonify, request
