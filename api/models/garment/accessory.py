@@ -1,17 +1,17 @@
-"""Accessories garment model."""
+"""Accessory garment model."""
 
 from typing import Dict, Any
 from .garment import Garment
 
-class Accessorie(Garment):
-    """Accessories garment class."""
+class Accessory(Garment):
+    """Accessory garment class."""
 
     def get_type(self) -> str:
-        return "accessories"
+        return "accessory"
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> "Accessorie":
-        return Accessorie(
+    def from_dict(data: Dict[str, Any]) -> "Accessory":
+        return Accessory(
             name=data.get("name"),
             user_id=data.get("user_id"),
             gender=data.get("gender"),

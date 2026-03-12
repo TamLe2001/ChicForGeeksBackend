@@ -7,7 +7,7 @@ from .pants import Pants
 from .hat import Hat
 from .shoes import Shoes
 from .skirt import Skirt
-from .accessorie import Accessorie
+from .accessory import Accessory
 
 __all__ = [
 	"Garment",
@@ -18,5 +18,5 @@ __all__ = [
 	"Hat",
 	"Shoes",
 	"Skirt",
-	"Accessorie",
+	"Accessory",
 ]

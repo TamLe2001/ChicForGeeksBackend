@@ -9,7 +9,7 @@ from api.models.garment import (
 	Hat,
 	Shoes,
 	Skirt,
-	Accessorie,
+	Accessory,
 )
 
 __all__ = [
@@ -21,5 +21,5 @@ __all__ = [
 	"Hat",
 	"Shoes",
 	"Skirt",
-	"Accessorie",
+	"Accessory",
 ]

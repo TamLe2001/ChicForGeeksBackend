@@ -64,7 +64,7 @@ class Garment(ABC):
         from .hat import Hat
         from .shoes import Shoes
         from .skirt import Skirt
-        from .accessorie import Accessorie
+        from .accessory import Accessory
 
         garment_type = data.get("type")
 
@@ -78,7 +78,7 @@ class Garment(ABC):
             return Shoes.from_dict(data)
         elif garment_type == "skirt":
             return Skirt.from_dict(data)
-        elif garment_type == "accessories":
-            return Accessorie.from_dict(data)
+        elif garment_type == "accessory":
+            return Accessory.from_dict(data)
         else:
             raise ValueError(f"Unknown garment type: {garment_type}")

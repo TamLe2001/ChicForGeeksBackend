@@ -1,7 +1,7 @@
 """Routes for garment management."""
 
 from flask import Blueprint, current_app, g, jsonify, request, send_file
-from api.models.garment import Shirt, Pants, Hat, Shoes, Skirt, Accessorie
+from api.models.garment import Shirt, Pants, Hat, Shoes, Skirt, Accessory
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 import os
@@ -181,8 +181,8 @@ def create_garment():
                 color=payload.get("color"),
                 material=payload.get("material", "cotton"),
             )
-        elif garment_type == "accessories":
-            garment = Accessorie(
+        elif garment_type == "accessory":
+            garment = Accessory(
                 name=payload.get("name", "Untitled Accessory"),
                 user_id=user_id,
                 gender=payload.get("gender", "unisex"),
