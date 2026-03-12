@@ -70,9 +70,8 @@ def create_outfit():
 @outfits_bp.get('/outfits/<outfit_id>')
 @token_required
 def get_outfit(outfit_id):
-	try:
-		oid = _parse_object_id(outfit_id, 'outfit id')
-	except Exception:
+	oid = _parse_object_id(outfit_id, 'outfit id')
+	if not oid:
 		return jsonify({'error': 'invalid outfit id'}), 400
 
 	outfit = current_app.db.outfits.find_one({'_id': oid})
@@ -85,9 +84,8 @@ def get_outfit(outfit_id):
 @outfits_bp.put('/outfits/<outfit_id>')
 @token_required
 def update_outfit(outfit_id):
-	try:
-		oid = _parse_object_id(outfit_id, 'outfit id')
-	except Exception:
+	oid = _parse_object_id(outfit_id, 'outfit id')
+	if not oid:
 		return jsonify({'error': 'invalid outfit id'}), 400
 
 	payload = request.get_json(silent=True) or {}
@@ -117,9 +115,8 @@ def update_outfit(outfit_id):
 @outfits_bp.delete('/outfits/<outfit_id>')
 @token_required
 def delete_outfit(outfit_id):
-	try:
-		oid = _parse_object_id(outfit_id, 'outfit id')
-	except Exception:
+	oid = _parse_object_id(outfit_id, 'outfit id')
+	if not oid:
 		return jsonify({'error': 'invalid outfit id'}), 400
 
 	result = current_app.db.outfits.delete_one({'_id': oid})

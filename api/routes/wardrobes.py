@@ -86,18 +86,18 @@ def remove_outfit_from_wardrobe(outfit_id):
         return jsonify({'error': 'invalid outfit id'}), 400
 
     user_id = str(g.current_user.get('_id'))
-    _get_or_create_wardrobe(user_id)
+    wardrobe_doc = _get_or_create_wardrobe(user_id)
 
-    result = current_app.db.wardrobes.update_one(
+    if outfit_oid not in (wardrobe_doc.get('outfit_ids') or []):
+        return jsonify({'error': 'outfit not in wardrobe'}), 404
+
+    current_app.db.wardrobes.update_one(
         {'user_id': user_id},
         {
             '$pull': {'outfit_ids': outfit_oid},
             '$set': {'updated_at': datetime.now(timezone.utc)},
         },
     )
-
-    if result.modified_count == 0:
-        return jsonify({'error': 'outfit not in wardrobe'}), 404
 
     updated = current_app.db.wardrobes.find_one({'user_id': user_id})
     return jsonify(Wardrobe.from_doc(updated).to_dict()), 200

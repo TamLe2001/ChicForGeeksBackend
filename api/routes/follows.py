@@ -28,6 +28,15 @@ def _normalize_follow_doc(follow_doc):
 	return follow_doc
 
 
+def _build_followed_id_query(target_user_id):
+	return {
+		'$or': [
+			{'followed_id': target_user_id},
+			{'following_id': target_user_id},
+		],
+	}
+
+
 @follows_bp.post('/follows')
 @token_required
 def follow_user():
@@ -65,7 +74,6 @@ def follow_user():
 
 	created = current_app.db.follows.find_one({'_id': result.inserted_id})
 	created_follow = Follow.from_doc(_normalize_follow_doc(created)).to_dict()
-	created_follow['following_id'] = created_follow['followed_id']
 
 	return jsonify(created_follow), 201
 
@@ -81,7 +89,10 @@ def unfollow_user(followed_id):
 
 	result = current_app.db.follows.delete_one({
 		'follower_id': current_user_id,
-		'followed_id': followed_id,
+		'$or': [
+			{'followed_id': followed_id},
+			{'following_id': followed_id},
+		],
 	})
 
 	if result.deleted_count == 0:
@@ -102,7 +113,7 @@ def get_followers():
 		return jsonify({'error': 'invalid user_id'}), 400
 
 	# Get all followers of the user
-	followers = list(current_app.db.follows.find({'followed_id': user_id}).sort('created_at', -1))
+	followers = list(current_app.db.follows.find(_build_followed_id_query(user_id)).sort('created_at', -1))
 	follower_ids = [f.get('follower_id') for f in followers]
 	follower_object_ids = [ObjectId(fid) for fid in follower_ids if ObjectId.is_valid(fid)]
 
