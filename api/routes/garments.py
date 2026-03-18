@@ -1,5 +1,6 @@
 """Routes for garment management."""
 
+from api.models.garment.accessory import Accessory
 from flask import Blueprint, current_app, g, jsonify, request, send_file
 from api.models.garment import Shirt, Pants, Skirt, Accessory
 from api.services.garment_service import GarmentService
@@ -18,42 +19,33 @@ def _get_garment_service() -> GarmentService:
 
 @garments_bp.get('/default')
 def get_default_garments():
-	"""Download the entire default directory as a zip file from NextCloud"""
+	"""Get all default garments metadata grouped by type."""
 	try:
-		# Get NextCloud credentials from environment
-		nextcloud_url = os.getenv('NEXTCLOUD_URL', '')
-		nextcloud_user = os.getenv('NEXTCLOUD_USER', '')
-		nextcloud_pass = os.getenv('NEXTCLOUD_PASS', '')
+		service = _get_garment_service()
+		garments = service.get_garments_by_creator("default")
 		
-		if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
-			return jsonify({'error': 'NextCloud configuration not found'}), 500
+		# Group by type
+		grouped = {
+			"shirts": [],
+			"pants": [],
+			"skirts": [],
+			"accessories": []
+		}
 		
-		# Construct the URL to download default directory as zip
-		# Remove trailing slash from nextcloud_url if present
-		nextcloud_url = nextcloud_url.rstrip('/')
-		download_url = f"{nextcloud_url}/default/?accept=zip&files=%5B%22avatar_female.glb%22%2C%22avatar_male.glb%22%2C%22pants_baggy_denim_female.glb%22%2C%22pants_leggings_female.glb%22%2C%22pants_male_black.glb%22%2C%22pants_male_denim.glb%22%2C%22tshirt_fitted_female_black.glb%22%2C%22tshirt_fitted_female_white.glb%22%2C%22tshirt_male_white.glb%22%2C%22tshirt_male_yellow.glb%22%5D"
+		for garment in garments:
+			garment_dict = garment.to_dict()
+			garment_type = garment_dict.get("type", "").lower()
+			
+			if garment_type == "shirt":
+				grouped["shirts"].append(garment_dict)
+			elif garment_type == "pants":
+				grouped["pants"].append(garment_dict)
+			elif garment_type == "skirt":
+				grouped["skirts"].append(garment_dict)
+			elif garment_type == "accessory":
+				grouped["accessories"].append(garment_dict)
 		
-		# Make authenticated request to NextCloud
-		response = requests.get(
-			download_url,
-			auth=(nextcloud_user, nextcloud_pass),
-			stream=True
-		)
-		
-		if response.status_code != 200:
-			return jsonify({
-				'error': f'Failed to download from NextCloud: {response.status_code}'
-			}), response.status_code
-		
-		# Create a BytesIO object from the response content
-		zip_data = BytesIO(response.content)
-		
-		return send_file(
-			zip_data,
-			mimetype='application/zip',
-			as_attachment=True,
-			download_name='default.zip'
-		)
+		return jsonify(grouped), 200
 		
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
@@ -158,7 +150,7 @@ def create_garment():
                 color=payload.get("color"),
                 material=payload.get("material", "cotton"),
             )
-        elif garment_type == "accessory":
+        elif garment_type == "accessories":
             garment = Accessory(
                 name=payload.get("name", "Untitled Accessory"),
                 user_id=user_id,
@@ -262,6 +254,7 @@ def update_garment(garment_id):
             "length",
             "material",
             "sleeve_type",
+            "size_range",
         }
 
         updates = {k: v for k, v in payload.items() if k in allowed_fields}

@@ -75,7 +75,7 @@ class User:
 
 	def set_password(self, password: str) -> None:
 		"""Hash and set password."""
-		self.password_hash = generate_password_hash(password)
+		self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
 	def verify_password(self, password: str) -> bool:
 		"""Verify password against hash."""
@@ -93,5 +93,5 @@ class User:
 			'bio': self.bio,
 			'birthday': self.birthday,
 			'role': self.role,
-			'created_at': self.created_at,
+			'created_at': self.created_at.isoformat() if self.created_at else None,
 		}
