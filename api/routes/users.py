@@ -24,10 +24,10 @@ def create_user():
 	user = User.from_payload(payload)
 	
 	user_doc = {
-		'name': user.name,
-		'email': user.email,
+		'name': user.name.strip(),
+		'email': user.email.strip(),
 		'profile_picture': user.profile_picture,
-		'bio': user.bio,
+		'bio': user.bio.strip(),
 		'birthday': user.birthday,
 		'created_at': user.created_at,
 	}
