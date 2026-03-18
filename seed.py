@@ -151,13 +151,6 @@ def _seed_outfits(db, user_ids_by_email):
                 "style": "formal",
                 "reference": "pants_trousers_black_female",
             },
-            "shoes": {
-                "type": "shoes",
-                "name": "Loafers",
-                "gender": "female",
-                "style": "formal",
-                "reference": "shoes_loafers_black_female",
-            },
         },
         # BoringLasse outfits
         {
@@ -298,7 +291,7 @@ def _seed_outfits(db, user_ids_by_email):
 
         # Build garment slots dynamically — only include slots present in the fixture.
         # Inject user_id and created_at into each garment sub-doc at seed time.
-        garment_slots = ["hat", "shirt", "pants", "skirt", "shoes", "accessory"]
+        garment_slots = ["shirt", "pants", "skirt", "accessory"]
         garments = {}
         for slot in garment_slots:
             if slot in outfit:

@@ -1,7 +1,7 @@
 """Routes for garment management."""
 
 from flask import Blueprint, current_app, g, jsonify, request, send_file
-from api.models.garment import Shirt, Pants, Hat, Shoes, Skirt, Accessory
+from api.models.garment import Shirt, Pants, Skirt, Accessory
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 import os
@@ -147,29 +147,6 @@ def create_garment():
                 color=payload.get("color"),
                 material=payload.get("material", "cotton"),
             )
-        elif garment_type == "hat":
-            garment = Hat(
-                name=payload.get("name", "Untitled Hat"),
-                user_id=user_id,
-                gender=payload.get("gender", "unisex"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
-                hat_style=payload.get("hat_style", "baseball"),
-                color=payload.get("color"),
-                material=payload.get("material", "cotton"),
-            )
-        elif garment_type == "shoes":
-            garment = Shoes(
-                name=payload.get("name", "Untitled Shoes"),
-                user_id=user_id,
-                gender=payload.get("gender", "unisex"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
-                shoe_type=payload.get("shoe_type", "sneaker"),
-                color=payload.get("color"),
-                size_range=payload.get("size_range", "all"),
-                material=payload.get("material", "fabric"),
-            )
         elif garment_type == "skirt":
             garment = Skirt(
                 name=payload.get("name", "Untitled Skirt"),
@@ -285,9 +262,6 @@ def update_garment(garment_id):
             "length",
             "material",
             "sleeve_type",
-            "hat_style",
-            "shoe_type",
-            "size_range",
         }
 
         updates = {k: v for k, v in payload.items() if k in allowed_fields}

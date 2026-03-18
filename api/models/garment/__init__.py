@@ -4,8 +4,6 @@ from .garment import Garment
 from .enums import Gender, Style
 from .shirt import Shirt
 from .pants import Pants
-from .hat import Hat
-from .shoes import Shoes
 from .skirt import Skirt
 from .accessory import Accessory
 
@@ -15,8 +13,6 @@ __all__ = [
 	"Style",
 	"Shirt",
 	"Pants",
-	"Hat",
-	"Shoes",
 	"Skirt",
 	"Accessory",
 ]

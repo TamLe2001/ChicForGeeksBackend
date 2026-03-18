@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
-from api.models.garment import Garment, Shirt, Pants, Hat, Shoes, Skirt, Accessory
+from api.models.garment import Garment, Shirt, Pants, Skirt, Accessory
 
 
 class GarmentService:
@@ -58,7 +58,7 @@ class GarmentService:
         Get garments filtered by type and optionally by gender.
 
         Args:
-            garment_type: Type of garment ('shirt', 'pants', 'hat', 'shoes', 'skirt', 'accessory')
+            garment_type: Type of garment ('shirt', 'pants', 'skirt', 'accessory')
             gender: Optional gender filter ('male', 'female', 'unisex')
 
         Returns:

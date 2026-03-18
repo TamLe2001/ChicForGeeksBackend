@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
-from api.models.garment import Hat, Shirt, Pants, Skirt ,Shoes, Accessory
+from api.models.garment import Shirt, Pants, Skirt, Accessory
 
 
 class Outfit:
@@ -11,11 +11,9 @@ class Outfit:
 		name: str,
 		user_id: str,
 		bio: Optional[str] = None,
-		hat: Optional[Hat] = None,
 		shirt: Optional[Shirt] = None,
 		pants: Optional[Pants] = None,
 		skirt: Optional[Skirt] = None,
-		shoes: Optional[Shoes] = None,
 		accessory: Optional[Accessory] = None,
 		published: bool = False,
 		created_at: Optional[datetime] = None,
@@ -27,11 +25,9 @@ class Outfit:
 			name: Outfit name
 			user_id: User ID who created this outfit
 			bio: Outfit description/bio
-			hat: Hat garment instance
 			shirt: Shirt garment instance
 			pants: Pants garment instance
 			skirt: Skirt garment instance
-			shoes: Shoes garment instance
 			accessory: Accessory garment instance
 			published: Whether outfit is published
 			created_at: Creation timestamp
@@ -39,11 +35,9 @@ class Outfit:
 		self.name = name
 		self.user_id = user_id
 		self.bio = bio
-		self.hat = hat
 		self.shirt = shirt
 		self.pants = pants
 		self.skirt = skirt
-		self.shoes = shoes
 		self.accessory = accessory
 		self.published = published
 		self.created_at = created_at or datetime.now(timezone.utc)
@@ -59,11 +53,9 @@ class Outfit:
 			name=payload.get('name'),
 			user_id=payload.get('user_id'),
 			bio=payload.get('bio'),
-			hat=Hat.from_dict(payload.get('hat')) if payload.get('hat') else None,
 			shirt=Shirt.from_dict(payload.get('shirt')) if payload.get('shirt') else None,
 			pants=Pants.from_dict(payload.get('pants')) if payload.get('pants') else None,
 			skirt=Skirt.from_dict(payload.get('skirt')) if payload.get('skirt') else None,
-			shoes=Shoes.from_dict(payload.get('shoes')) if payload.get('shoes') else None,
 			accessory=Accessory.from_dict(payload.get('accessory')) if payload.get('accessory') else None,
 			published=payload.get('published', False),
 			created_at=payload.get('created_at'),
@@ -79,11 +71,9 @@ class Outfit:
 			name=outfit_doc.get('name'),
 			user_id=outfit_doc.get('user_id'),
 			bio=outfit_doc.get('bio'),
-			hat=Hat.from_dict(outfit_doc.get('hat')) if outfit_doc.get('hat') else None,
 			shirt=Shirt.from_dict(outfit_doc.get('shirt')) if outfit_doc.get('shirt') else None,
 			pants=Pants.from_dict(outfit_doc.get('pants')) if outfit_doc.get('pants') else None,
 			skirt=Skirt.from_dict(outfit_doc.get('skirt')) if outfit_doc.get('skirt') else None,
-			shoes=Shoes.from_dict(outfit_doc.get('shoes')) if outfit_doc.get('shoes') else None,
 			accessory=Accessory.from_dict(outfit_doc.get('accessory')) if outfit_doc.get('accessory') else None,
 			published=outfit_doc.get('published', False),
 			created_at=outfit_doc.get('created_at'),
@@ -98,12 +88,10 @@ class Outfit:
 			'name': self.name,
 			'user_id': self.user_id,
 			'bio': self.bio,
-			'hat': self.hat.to_dict() if self.hat else None,
 			'shirt': self.shirt.to_dict() if self.shirt else None,
 			'pants': self.pants.to_dict() if self.pants else None,
 			'skirt': self.skirt.to_dict() if self.skirt else None,
 			'accessory': self.accessory.to_dict() if self.accessory else None,
-			'shoes': self.shoes.to_dict() if self.shoes else None,
 			'published': self.published,
 			'created_at': self.created_at,
 		}

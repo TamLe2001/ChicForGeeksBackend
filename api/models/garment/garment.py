@@ -61,8 +61,6 @@ class Garment(ABC):
         """Factory method to create garment from dictionary."""
         from .shirt import Shirt
         from .pants import Pants
-        from .hat import Hat
-        from .shoes import Shoes
         from .skirt import Skirt
         from .accessory import Accessory
 
@@ -72,10 +70,6 @@ class Garment(ABC):
             return Shirt.from_dict(data)
         elif garment_type == "pants":
             return Pants.from_dict(data)
-        elif garment_type == "hat":
-            return Hat.from_dict(data)
-        elif garment_type == "shoes":
-            return Shoes.from_dict(data)
         elif garment_type == "skirt":
             return Skirt.from_dict(data)
         elif garment_type == "accessory":

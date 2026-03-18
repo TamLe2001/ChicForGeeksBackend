@@ -54,10 +54,8 @@ def create_outfit():
 		'name': outfit.name,
 		'user_id': outfit.user_id,
 		'bio': outfit.bio,
-		'hat': outfit.hat.to_dict() if outfit.hat else None,
 		'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
 		'pants': outfit.pants.to_dict() if outfit.pants else None,
-		'shoes': outfit.shoes.to_dict() if outfit.shoes else None,
 		'published': outfit.published,
 		'created_at': outfit.created_at,
 	}
@@ -95,10 +93,8 @@ def update_outfit(outfit_id):
 		'name',
 		'style',
 		'bio',
-		'hat',
 		'shirt',
 		'pants',
-		'shoes',
 		'published',
 	}
 	update_fields = {k: v for k, v in payload.items() if k in allowed_fields}
