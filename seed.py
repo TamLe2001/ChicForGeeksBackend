@@ -86,7 +86,7 @@ def _seed_users(db):
                     "birthday": user["birthday"],
                     "profile_picture": user["profile_picture"],
                     "is_dummy": True,
-                    "fixture_key": user["fixture_key"],
+                    "fixture_key": user.get("fixture_key", user["id"]),
                     "updated_at": now,
                 },
                 "$setOnInsert": {
