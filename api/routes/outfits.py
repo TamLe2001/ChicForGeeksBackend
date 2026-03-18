@@ -1,13 +1,21 @@
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request, send_file
 from datetime import datetime, timezone
 from api.models.comment import Comment
 from api.models.like import Like
 from api.models.outfit import Outfit
 from api.routes.auth import token_required
+from api.services.thumbnail_service import ThumbnailService
+from io import BytesIO
 
 outfits_bp = Blueprint('outfits', __name__)
+
+
+def _get_thumbnail_service() -> ThumbnailService:
+	"""Get or create thumbnail service instance."""
+	uploads_path = current_app.config.get('UPLOAD_PATH', 'uploads')
+	return ThumbnailService(current_app.db, uploads_path)
 
 
 def _parse_object_id(value, label):
@@ -60,9 +68,30 @@ def create_outfit():
 		'created_at': outfit.created_at,
 	}
 	result = current_app.db.outfits.insert_one(outfit_doc)
+	outfit_id = str(result.inserted_id)
+
+	# Handle thumbnail generation if provided
+	thumbnail_url = None
+	if payload.get('thumbnail'):
+		try:
+			thumbnail_service = _get_thumbnail_service()
+			thumbnail_url = thumbnail_service.generate_thumbnail(
+				outfit_id,
+				payload.get('thumbnail'),
+				outfit.name
+			)
+		except Exception as e:
+			print(f"Warning: Failed to generate thumbnail: {str(e)}")
+			# Continue without thumbnail rather than fail the entire request
 
 	created = current_app.db.outfits.find_one({'_id': result.inserted_id})
-	return jsonify(Outfit.from_doc(created).to_dict()), 201
+	outfit_dict = Outfit.from_doc(created).to_dict()
+	
+	# Add thumbnail URL to response
+	if thumbnail_url:
+		outfit_dict['thumbnail'] = thumbnail_url
+
+	return jsonify(outfit_dict), 201
 
 
 @outfits_bp.get('/outfits/<outfit_id>')
@@ -125,8 +154,35 @@ def delete_outfit(outfit_id):
 	current_app.db.likes.delete_many({'outfit_id': oid})
 	current_app.db.comments.delete_many({'outfit_id': oid})
 	current_app.db.wardrobes.update_many({}, {'$pull': {'outfit_ids': oid}})
+	
+	# Delete associated thumbnail
+	try:
+		thumbnail_service = _get_thumbnail_service()
+		thumbnail_service.delete_thumbnail(outfit_id)
+	except Exception as e:
+		print(f"Warning: Failed to delete thumbnail: {str(e)}")
 
 	return jsonify({'status': 'deleted'}), 200
+
+
+@outfits_bp.get('/outfits/<outfit_id>/thumbnail')
+def get_outfit_thumbnail(outfit_id):
+	"""Get thumbnail image for an outfit."""
+	try:
+		thumbnail_service = _get_thumbnail_service()
+		thumbnail_bytes = thumbnail_service.get_thumbnail(outfit_id)
+		
+		if not thumbnail_bytes:
+			return jsonify({'error': 'thumbnail not found'}), 404
+		
+		return send_file(
+			BytesIO(thumbnail_bytes),
+			mimetype='image/png',
+			as_attachment=False,
+			download_name=f'{outfit_id}_thumbnail.png'
+		)
+	except Exception as e:
+		return jsonify({'error': f'Failed to retrieve thumbnail: {str(e)}'}), 500
 
 
 @outfits_bp.get('/outfits/<outfit_id>/likes')
