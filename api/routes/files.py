@@ -28,7 +28,7 @@ def upload_to_cloud():
             return {"error": "No file selected"}, 400
         
         if not allowed_file(file.filename):
-            return {"error": "Only GLB/GLTF/PNG/JPG/JPEG files allowed"}, 400
+            return {"error": f"Only GLB/GLTF/PNG/JPG/JPEG files allowed {file.filename.__str__()}" }, 400
         
         # Get user_id and category from request args or form data
         user_id = request.form.get('user_id') or request.args.get('user_id')
