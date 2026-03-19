@@ -29,7 +29,7 @@ class Config:
 	
 	# File upload settings
 	MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-	ALLOWED_EXTENSIONS = {'glb', 'gltf'}
+	ALLOWED_EXTENSIONS = {'glb', 'gltf', 'png', 'jpg', 'jpeg'}
 
 	# CORS settings
 	CORS_ORIGINS = [
