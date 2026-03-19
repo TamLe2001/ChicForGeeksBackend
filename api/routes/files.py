@@ -16,7 +16,7 @@ def allowed_file(filename):
 
 @files_bp.route('/upload', methods=['POST'])
 def upload_to_cloud():
-    """Upload GLB/GLTF files to NextCloud storage with folder organization"""
+    """Upload GLB/GLTF/PNG/JPG/JPEG files to NextCloud storage with folder organization"""
     try:
         # Validate file presence
         if 'file' not in request.files:
@@ -28,7 +28,7 @@ def upload_to_cloud():
             return {"error": "No file selected"}, 400
         
         if not allowed_file(file.filename):
-            return {"error": "Only GLB/GLTF files allowed"}, 400
+            return {"error": "Only GLB/GLTF/PNG/JPG/JPEG files allowed"}, 400
         
         # Get user_id and category from request args or form data
         user_id = request.form.get('user_id') or request.args.get('user_id')
