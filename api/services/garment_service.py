@@ -74,6 +74,20 @@ class GarmentService:
             doc["_id"] = str(doc["_id"])
             garments.append(Garment.from_dict(doc))
         return garments
+    
+    def get_default_garments(self) -> List[Garment]:
+        """
+        Get default garments for new users.
+
+        Returns:
+            List of default garments
+        """
+        docs = list(self.collection.find({"default": True}).sort("created_at", -1))
+        garments = []
+        for doc in docs:
+            doc["_id"] = str(doc["_id"])
+            garments.append(Garment.from_dict(doc))
+        return garments
 
     def get_garments_by_creator(self, creator_id: str) -> List[Garment]:
         """

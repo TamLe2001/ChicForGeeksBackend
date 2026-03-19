@@ -9,8 +9,6 @@ from api.config import Config
 def _seed_default_garments(db):
     """Seed default garments (shirts, pants, skirts, accessories) with user_id='default'."""
     now = datetime.now(timezone.utc)
-    """Seed default garments (shirts, pants, skirts, accessories) with user_id='default'."""
-    now = datetime.now(timezone.utc)
 
     # Default shirts
     shirts = [
@@ -280,12 +278,15 @@ def _seed_default_garments(db):
 
     # Seed all garments
     all_garments = shirts + pants + skirts + accessories
+    collection = db.garment_default
+
     for garment in all_garments:
-        db.garments.update_one(
+        collection.update_one(
             {"id": garment["id"]},
             {
                 "$set": {
                     **garment,
+                    "default": True,
                     "is_dummy": True,
                     "updated_at": now,
                 },
@@ -296,7 +297,9 @@ def _seed_default_garments(db):
             upsert=True,
         )
 
-    print(f"Default garments seed complete: {len(all_garments)} items seeded.")
+    print(
+        f"Default garments seed complete: {len(all_garments)} items seeded to garment_default."
+    )
 
 
 def seed_default_garments():
@@ -315,9 +318,10 @@ def seed_default_garments():
         )
         db = client[db_name]
         
-        # Create index on user_id for faster queries
-        db.garments.create_index([('user_id', ASCENDING)])
-        db.garments.create_index([('id', ASCENDING)], unique=True)
+        # Create indexes on garment_default for faster queries
+        db.garment_default.create_index([('user_id', ASCENDING)])
+        db.garment_default.create_index([('default', ASCENDING)])
+        db.garment_default.create_index([('id', ASCENDING)], unique=True)
         
         _seed_default_garments(db)
         print("✓ Database seeding completed successfully!")

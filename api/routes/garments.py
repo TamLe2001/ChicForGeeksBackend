@@ -22,7 +22,7 @@ def get_default_garments():
 	"""Get all default garments metadata grouped by type."""
 	try:
 		service = _get_garment_service()
-		garments = service.get_garments_by_creator("default")
+		garments = service.get_default_garments()
 		
 		# Group by type
 		grouped = {
