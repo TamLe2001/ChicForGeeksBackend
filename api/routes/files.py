@@ -10,7 +10,7 @@ files_bp = Blueprint('files', __name__)
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
-    allowed_ext = current_app.config.get('ALLOWED_EXTENSIONS', {'glb', 'gltf'})
+    allowed_ext = current_app.config.get('ALLOWED_EXTENSIONS', {'glb', 'gltf', 'png', 'jpg', 'jpeg'})
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_ext
 
 

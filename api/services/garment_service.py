@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
-from api.models.garment import Garment, Shirt, Pants, Skirt, Accessory
+from api.models.garment import Garment
 
 
 class GarmentService:
