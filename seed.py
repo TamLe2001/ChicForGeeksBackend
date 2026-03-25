@@ -281,7 +281,7 @@ def _seed_default_garments(db):
 
     for garment in all_garments:
         db.garments.update_one(
-            {"id": garment["id"]},
+            {"_id": garment["_id"]},
             {
                 "$set": {
                     **garment,
