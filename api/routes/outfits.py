@@ -49,6 +49,7 @@ def list_outfits():
 @outfits_bp.post('/outfits')
 @token_required
 def create_outfit():
+	print(f"[POST /api/outfits] User {g.current_user.get('_id')} creating outfit", flush=True)
 	payload = request.get_json(silent=True) or {}
 
 	if not payload.get('name'):
@@ -57,41 +58,56 @@ def create_outfit():
 	user_id = str(g.current_user.get('_id'))
 	payload['user_id'] = user_id
 
-	outfit = Outfit.from_payload(payload)
-	outfit_doc = {
-		'name': outfit.name,
-		'user_id': outfit.user_id,
-		'bio': outfit.bio,
-		'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
-		'pants': outfit.pants.to_dict() if outfit.pants else None,
-		'published': outfit.published,
-		'created_at': outfit.created_at,
-	}
-	result = current_app.db.outfits.insert_one(outfit_doc)
-	outfit_id = str(result.inserted_id)
+	try:
+		outfit = Outfit.from_payload(payload)
+		print(f"[POST /api/outfits] Outfit object created: {outfit.name}", flush=True)
+		
+		outfit_doc = {
+			'name': outfit.name,
+			'user_id': outfit.user_id,
+			'bio': outfit.bio,
+			'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
+			'pants': outfit.pants.to_dict() if outfit.pants else None,
+			'published': outfit.published,
+			'created_at': outfit.created_at,
+		}
+		print(f"[POST /api/outfits] Outfit doc prepared: {outfit_doc}", flush=True)
+		
+		result = current_app.db.outfits.insert_one(outfit_doc)
+		outfit_id = str(result.inserted_id)
+		print(f"[POST /api/outfits] Outfit inserted with ID: {outfit_id}", flush=True)
 
-	# Handle thumbnail generation if provided
-	thumbnail_url = None
-	if payload.get('thumbnail'):
-		try:
-			thumbnail_service = _get_thumbnail_service()
-			thumbnail_url = thumbnail_service.generate_thumbnail(
-				outfit_id,
-				payload.get('thumbnail'),
-				outfit.name
-			)
-		except Exception as e:
-			print(f"Warning: Failed to generate thumbnail: {str(e)}")
-			# Continue without thumbnail rather than fail the entire request
+		# Handle thumbnail generation if provided
+		thumbnail_url = None
+		if payload.get('thumbnail'):
+			try:
+				thumbnail_service = _get_thumbnail_service()
+				thumbnail_url = thumbnail_service.generate_thumbnail(
+					outfit_id,
+					payload.get('thumbnail'),
+					outfit.name
+				)
+				print(f"[POST /api/outfits] Thumbnail generated: {thumbnail_url}", flush=True)
+			except Exception as e:
+				print(f"[POST /api/outfits] Warning: Failed to generate thumbnail: {str(e)}", flush=True)
+				# Continue without thumbnail rather than fail the entire request
 
-	created = current_app.db.outfits.find_one({'_id': result.inserted_id})
-	outfit_dict = Outfit.from_doc(created).to_dict()
-	
-	# Add thumbnail URL to response
-	if thumbnail_url:
-		outfit_dict['thumbnail'] = thumbnail_url
+		created = current_app.db.outfits.find_one({'_id': result.inserted_id})
+		outfit_dict = Outfit.from_doc(created).to_dict()
+		
+		# Add thumbnail URL to response
+		if thumbnail_url:
+			outfit_dict['thumbnail'] = thumbnail_url
 
-	return jsonify(outfit_dict), 201
+		print(f"[POST /api/outfits] Success! Outfit created: {outfit_id}", flush=True)
+		return jsonify(outfit_dict), 201
+		
+	except Exception as e:
+		print(f"[POST /api/outfits] ERROR: {str(e)}", flush=True)
+		print(f"[POST /api/outfits] Exception type: {type(e).__name__}", flush=True)
+		import traceback
+		print(f"[POST /api/outfits] Traceback: {traceback.format_exc()}", flush=True)
+		return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
 @outfits_bp.get('/outfits/<outfit_id>')
