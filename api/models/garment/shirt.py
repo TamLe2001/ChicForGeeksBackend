@@ -18,7 +18,7 @@ class Shirt(Garment):
             reference=data.get("reference"),
             style=data.get("style"),
             created_at=data.get("created_at"),
+            id=data.get("id"),
         )
-        # Preserve MongoDB _id field
         shirt._id = data.get("_id")
         return shirt

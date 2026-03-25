@@ -16,6 +16,7 @@ class Garment(ABC):
         style: Style,
         reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
+        id: Optional[str] = None,
         **kwargs
     ):
         """
@@ -28,6 +29,7 @@ class Garment(ABC):
             style: Genre or category (Style enum)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
+            id: Optional custom ID field from database
             **kwargs: Additional attributes specific to garment type
         """
         self.name = name
@@ -36,12 +38,13 @@ class Garment(ABC):
         self.style = style if isinstance(style, Style) else Style(style)
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
-        self._id = None  # Set by database
+        self.id = id  # Custom id field from database
+        self._id = None  # MongoDB _id field
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert garment to dictionary for database storage."""
         return {
-            "id": str(self._id) if self._id else None,
+            "id": self.id or (str(self._id) if self._id else None),
             "type": self.get_type(),
             "name": self.name,
             "user_id": self.user_id,
