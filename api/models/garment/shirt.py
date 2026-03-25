@@ -11,7 +11,7 @@ class Shirt(Garment):
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "Shirt":
-        return Shirt(
+        shirt = Shirt(
             name=data.get("name"),
             user_id=data.get("user_id"),
             gender=data.get("gender"),

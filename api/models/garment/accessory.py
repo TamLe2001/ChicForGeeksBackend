@@ -11,7 +11,7 @@ class Accessory(Garment):
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "Accessory":
-        return Accessory(
+        accessory = Accessory(
             name=data.get("name"),
             user_id=data.get("user_id"),
             gender=data.get("gender"),
@@ -19,3 +19,6 @@ class Accessory(Garment):
             reference=data.get("reference"),
             created_at=data.get("created_at"),
         )
+        # Preserve MongoDB _id field
+        accessory._id = data.get("_id")
+        return accessory
