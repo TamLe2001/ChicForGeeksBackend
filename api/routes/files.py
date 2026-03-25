@@ -62,7 +62,8 @@ def upload_to_cloud():
         category_path = f"{base_path}{category}/"
         
         # Create user folder
-        create_folder_response = requests.mkcol(
+        create_folder_response = requests.request(
+            "MKCOL",
             base_path,
             auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
             timeout=10
@@ -72,7 +73,8 @@ def upload_to_cloud():
             return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
         
         # Create category folder
-        create_category_response = requests.mkcol(
+        create_category_response = requests.request(
+            "MKCOL",
             category_path,
             auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
             timeout=10
