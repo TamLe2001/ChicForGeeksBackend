@@ -1,6 +1,7 @@
 from datetime import datetime
 import requests
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, g
+from api.routes.auth import token_required
 
 retexture_bp = Blueprint('retexture', __name__)
 
@@ -14,10 +15,9 @@ def _require_api_key():
 
 
 @retexture_bp.post('/retexture')
+@token_required
 def retexture():
-    auth_error = _require_api_key()
-    if auth_error:
-        return auth_error
+    # This endpoint is now available for authenticated users
 
     payload = request.get_json(silent=True) or {}
 
