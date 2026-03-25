@@ -39,5 +39,5 @@ class Config:
 	]
 
 	# Meshy settings
-	MESHY_API_KEY = os.getenv('MESHY_AI_API_KEY')
+	MESHY_AI_API_KEY = os.getenv('MESHY_AI_API_KEY')
 	INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY')
