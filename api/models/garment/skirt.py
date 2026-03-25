@@ -14,7 +14,6 @@ class Skirt(Garment):
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "Skirt":
         skirt = Skirt(
-            id= data.get("id"),
             name=data.get("name"),
             user_id=data.get("user_id"),
             gender= Gender.FEMALE,  # Skirts are typically associated with females
