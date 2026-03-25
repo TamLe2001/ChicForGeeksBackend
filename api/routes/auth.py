@@ -33,26 +33,32 @@ def token_required(handler):
 	def wrapper(*args, **kwargs):
 		auth_header = request.headers.get('Authorization', '')
 		if not auth_header.startswith('Bearer '):
+			print("JWT verification error: missing or invalid authorization header", flush=True)
 			return jsonify({'error': 'missing or invalid authorization header'}), 401
 
 		token = auth_header.split(' ', 1)[1].strip()
 		if not token:
+			print("JWT verification error: missing token", flush=True)
 			return jsonify({'error': 'missing token'}), 401
 
 		try:
 			decoded = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
-		except jwt.ExpiredSignatureError:
+		except jwt.ExpiredSignatureError as err:
+			print(f"JWT verification error: token expired - {err}", flush=True)
 			return jsonify({'error': 'token expired'}), 401
-		except jwt.InvalidTokenError:
+		except jwt.InvalidTokenError as err:
+			print(f"JWT verification error: invalid token - {err}", flush=True)
 			return jsonify({'error': 'invalid token'}), 401
 
 		try:
 			user_id = ObjectId(decoded.get('sub'))
-		except Exception:
+		except Exception as err:
+			print(f"JWT verification error: invalid token user id - {err}", flush=True)
 			return jsonify({'error': 'invalid token user id'}), 401
 
 		user = current_app.db.users.find_one({'_id': user_id})
 		if not user:
+			print(f"JWT verification error: user not found - user_id={decoded.get('sub')}", flush=True)
 			return jsonify({'error': 'user not found'}), 401
 
 		g.current_user = user
