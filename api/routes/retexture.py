@@ -34,7 +34,7 @@ def retexture():
         'enable_pbr': bool(payload.get('enable_pbr', True)),
     }
 
-    meshy_api_key = current_app.config.get('MESHY_API_KEY')
+    meshy_api_key = current_app.config.get('MESHY_AI_API_KEY')
     if not meshy_api_key:
         return jsonify({'error': 'meshy api key not configured'}), 500
 

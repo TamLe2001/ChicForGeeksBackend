@@ -295,3 +295,12 @@ def delete_garment(garment_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@garments_bp.get("/meshy-key/key")
+@token_required
+def get_meshy_key():
+    """Get meshy api key for authenticated user."""
+    meshy_api_key = current_app.config.get('MESHY_AI_API_KEY')
+    if not meshy_api_key:
+        return jsonify({'error': 'meshy api key not configured'}), 500
+
+    return jsonify({'meshy_api_key': meshy_api_key}), 200
