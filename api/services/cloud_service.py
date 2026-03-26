@@ -1,6 +1,6 @@
 from typing import Optional
 
-from backend.api.models.garment.garment import Garment
+from api.models.garment.garment import Garment
 
 class CloudService:
     """Service for managing file in cloud storage."""
