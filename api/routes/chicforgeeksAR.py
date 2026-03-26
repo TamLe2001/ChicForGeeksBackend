@@ -24,6 +24,11 @@ def upload_fbx_to_cloud():
 		if "." not in filename or filename.rsplit(".", 1)[1].lower() != "fbx":
 			return {"error": "Only .fbx files are allowed"}, 400
 
+		# File size validation
+		MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+		if file.content_length and file.content_length > MAX_FILE_SIZE:
+			return {"error": f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)} MB"}, 413
+
 		nextcloud_url = current_app.config.get("NEXTCLOUD_URL") or os.getenv(
 			"NEXTCLOUD_URL", ""
 		)

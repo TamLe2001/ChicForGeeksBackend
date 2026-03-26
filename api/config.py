@@ -29,6 +29,7 @@ class Config:
 	
 	# File upload settings
 	MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+	MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB - Flask request size limit
 	ALLOWED_EXTENSIONS = {'glb', 'gltf', 'png', 'jpg', 'jpeg'}
 
 	# CORS settings
