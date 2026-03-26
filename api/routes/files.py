@@ -14,79 +14,65 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_ext
 
 
-@files_bp.route('/upload', methods=['POST'])
-def upload_to_cloud():
-    """Upload GLB/GLTF/PNG/JPG/JPEG files to NextCloud storage with folder organization"""
+def allowed_file_by_extensions(filename, allowed_extensions):
+    """Check if filename extension is in a specific allowed set"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+
+
+# Model upload: requires category
+def _upload_model_to_cloud(allowed_extensions, file_type_label):
     try:
-        # Validate file presence
         if 'file' not in request.files:
             return {"error": "No file provided"}, 400
-        
+
         file = request.files['file']
-        
         if file.filename == '':
             return {"error": "No file selected"}, 400
-        
-        if not allowed_file(file.filename):
-            return {"error": f"Only GLB/GLTF/PNG/JPG/JPEG files allowed {file.filename.__str__()}" }, 400
-        
-        # Get user_id and category from request args or form data
+        if not allowed_file_by_extensions(file.filename, allowed_extensions):
+            allowed_text = ', '.join(sorted(allowed_extensions))
+            return {"error": f"Only {file_type_label} files allowed ({allowed_text})"}, 400
+
         user_id = request.form.get('user_id') or request.args.get('user_id')
         category = request.form.get('category') or request.args.get('category')
-        
         if not user_id:
             return {"error": "user_id is required"}, 400
-        
         if not category:
             return {"error": "category is required (shirt, pants, skirt, accessory)"}, 400
-
         valid_categories = {'shirt', 'pants', 'skirt', 'accessory'}
         if category.lower() not in valid_categories:
             return {"error": f"Invalid category. Must be one of: {', '.join(valid_categories)}"}, 400
-        
-        # Check file size
+
         max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
         if file.content_length and file.content_length > max_size:
             return {"error": "File too large (max 100MB)"}, 413
-        
-        # Get NextCloud credentials from config
+
         nextcloud_url = current_app.config.get('NEXTCLOUD_URL')
         nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
         nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
-        
         if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
             return {"error": "NextCloud not configured"}, 500
-        
-        # Create folders if they don't exist: user_id/category/
+
         base_path = f"{nextcloud_url}{user_id}/"
         category_path = f"{base_path}{category}/"
-        
-        # Create user folder
         create_folder_response = requests.request(
             "MKCOL",
             base_path,
             auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
             timeout=10
         )
-        # Status 201 = created, 405 = already exists, both are OK
         if create_folder_response.status_code not in [201, 405]:
             return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
-        
-        # Create category folder
         create_category_response = requests.request(
             "MKCOL",
             category_path,
             auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
             timeout=10
         )
-        # Status 201 = created, 405 = already exists, both are OK
         if create_category_response.status_code not in [201, 405]:
             return {"error": f"Failed to create category folder: {create_category_response.status_code}"}, 500
-        
-        # Upload to NextCloud in organized folder
         upload_url = f"{category_path}{file.filename}"
         headers = {"Content-Type": file.content_type or "application/octet-stream"}
-        
         response = requests.put(
             upload_url,
             data=file.stream,
@@ -94,14 +80,11 @@ def upload_to_cloud():
             headers=headers,
             timeout=30
         )
-        
         if response.status_code not in [201, 204]:
             return {
                 "error": f"NextCloud error: {response.status_code}",
                 "details": response.text
             }, 500
-        
-        # Save metadata to MongoDB
         file_doc = {
             "filename": file.filename,
             "user_id": user_id,
@@ -109,25 +92,112 @@ def upload_to_cloud():
             "url": upload_url,
             "size": file.content_length or 0,
             "content_type": file.content_type or "application/octet-stream",
-            "uploaded_at": datetime.utcnow()
+            "uploaded_at": datetime.utcnow(),
+            "file_type": file_type_label
         }
-        
         result = current_app.db.files.insert_one(file_doc)
-        
         return {
             "status": "success",
-            "message": "File uploaded successfully",
+            "message": f"{file_type_label.capitalize()} file uploaded successfully",
             "file_id": str(result.inserted_id),
             "filename": file.filename,
-            "cloud_url": upload_url
+            "cloud_url": upload_url,
+            "file_type": file_type_label
         }, 201
-        
     except requests.exceptions.Timeout:
         return {"error": "Upload timeout - file may be too large"}, 504
     except requests.exceptions.RequestException as e:
         return {"error": f"Upload failed: {str(e)}"}, 500
     except Exception as e:
         return {"error": f"Server error: {str(e)}"}, 500
+
+# Image upload: does NOT require category
+def _upload_image_to_cloud(allowed_extensions, file_type_label):
+    try:
+        if 'file' not in request.files:
+            return {"error": "No file provided"}, 400
+        file = request.files['file']
+        if file.filename == '':
+            return {"error": "No file selected"}, 400
+        if not allowed_file_by_extensions(file.filename, allowed_extensions):
+            allowed_text = ', '.join(sorted(allowed_extensions))
+            return {"error": f"Only {file_type_label} files allowed ({allowed_text})"}, 400
+        user_id = request.form.get('user_id') or request.args.get('user_id')
+        if not user_id:
+            return {"error": "user_id is required"}, 400
+        max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
+        if file.content_length and file.content_length > max_size:
+            return {"error": "File too large (max 100MB)"}, 413
+        nextcloud_url = current_app.config.get('NEXTCLOUD_URL')
+        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
+        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
+        if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
+            return {"error": "NextCloud not configured"}, 500
+        base_path = f"{nextcloud_url}{user_id}/"
+        create_folder_response = requests.request(
+            "MKCOL",
+            base_path,
+            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            timeout=10
+        )
+        if create_folder_response.status_code not in [201, 405]:
+            return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
+        upload_url = f"{base_path}{file.filename}"
+        headers = {"Content-Type": file.content_type or "application/octet-stream"}
+        response = requests.put(
+            upload_url,
+            data=file.stream,
+            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            headers=headers,
+            timeout=30
+        )
+        if response.status_code not in [201, 204]:
+            return {
+                "error": f"NextCloud error: {response.status_code}",
+                "details": response.text
+            }, 500
+        file_doc = {
+            "filename": file.filename,
+            "user_id": user_id,
+            "url": upload_url,
+            "size": file.content_length or 0,
+            "content_type": file.content_type or "application/octet-stream",
+            "uploaded_at": datetime.utcnow(),
+            "file_type": file_type_label
+        }
+        result = current_app.db.files.insert_one(file_doc)
+        return {
+            "status": "success",
+            "message": f"{file_type_label.capitalize()} file uploaded successfully",
+            "file_id": str(result.inserted_id),
+            "filename": file.filename,
+            "cloud_url": upload_url,
+            "file_type": file_type_label
+        }, 201
+    except requests.exceptions.Timeout:
+        return {"error": "Upload timeout - file may be too large"}, 504
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Upload failed: {str(e)}"}, 500
+    except Exception as e:
+        return {"error": f"Server error: {str(e)}"}, 500
+
+
+@files_bp.route('/upload', methods=['POST'])
+def upload_to_cloud():
+    """Legacy endpoint kept for compatibility. Prefer /upload/models and /upload/images."""
+    return {"error": "Endpoint deprecated. Use /upload/models for GLB/GLTF or /upload/images for images."}, 410
+
+
+@files_bp.route('/upload/models', methods=['POST'])
+def upload_model_to_cloud():
+    """Upload GLB/GLTF files to NextCloud storage with folder organization (category required)"""
+    return _upload_model_to_cloud({'glb', 'gltf'}, 'model')
+
+
+@files_bp.route('/upload/images', methods=['POST'])
+def upload_image_to_cloud():
+    """Upload image files to NextCloud storage with folder organization (no category required)"""
+    return _upload_image_to_cloud({'png', 'jpg', 'jpeg'}, 'image')
 
 
 @files_bp.route('/files', methods=['GET'])

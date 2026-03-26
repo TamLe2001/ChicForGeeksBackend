@@ -35,13 +35,12 @@ class FileService:
 
     def download_default_files(self, uploads_base_path: str) -> None:
         """
-        Download default files from NextCloud storage on startup.
-        
+        Register default files in MongoDB if not already present. (Zip download removed.)
         Args:
             uploads_base_path: Base path for uploads directory
         """
         if not self.nextcloud_url:
-            print("NEXTCLOUD_URL not configured, skipping default files download")
+            print("NEXTCLOUD_URL not configured, skipping default files registration")
             return
 
         # Check if default files already exist in database
@@ -49,16 +48,13 @@ class FileService:
             print("Default files already loaded")
             return
 
-        default_files_url = f"{self.nextcloud_url}default/?accept=zip"
         default_dir = os.path.join(uploads_base_path, 'default')
-
         try:
             self._ensure_directory(default_dir)
-            self._download_and_extract_files(default_files_url, default_dir)
             self._register_files_in_database(default_dir)
-            print("Successfully downloaded and registered default files")
+            print("Successfully registered default files (zip download skipped)")
         except Exception as e:
-            print(f"Error downloading default files: {e}")
+            print(f"Error registering default files: {e}")
 
     def _default_files_exist(self) -> bool:
         """Check if default files are already registered in database."""
@@ -72,23 +68,7 @@ class FileService:
         """Create directory if it doesn't exist."""
         os.makedirs(directory_path, exist_ok=True)
 
-    def _download_and_extract_files(self, url: str, target_dir: str) -> None:
-        """
-        Download and extract zip file from URL.
-        
-        Args:
-            url: URL to download zip file from
-            target_dir: Directory to extract files to
-        """
-        auth = None
-        if self.nextcloud_user and self.nextcloud_pass:
-            auth = (self.nextcloud_user, self.nextcloud_pass)
-
-        response = requests.get(url, timeout=30, auth=auth)
-        response.raise_for_status()
-
-        with zipfile.ZipFile(BytesIO(response.content)) as zip_file:
-            zip_file.extractall(target_dir)
+    # _download_and_extract_files removed (zip download not needed)
 
     def _register_files_in_database(self, default_dir: str) -> None:
         """
