@@ -1,11 +1,9 @@
 """File service for handling file operations, uploads, and default files management."""
 
 import os
-import requests
-import zipfile
-from io import BytesIO
 from datetime import datetime
 from typing import Optional
+from flask import current_app
 
 
 class FileService:
@@ -21,9 +19,7 @@ class FileService:
         """
         self.db = db
         self.config = config
-        self.nextcloud_url = self._normalize_base_url(config.get('NEXTCLOUD_URL'))
-        self.nextcloud_user = config.get('NEXTCLOUD_USER')
-        self.nextcloud_pass = config.get('NEXTCLOUD_PASS')
+        self.cloud = current_app.cloud_service if hasattr(current_app, 'cloud_service') else None
 
     @staticmethod
     def _normalize_base_url(url: Optional[str]) -> Optional[str]:
@@ -35,12 +31,12 @@ class FileService:
 
     def download_default_files(self, uploads_base_path: str) -> None:
         """
-        Register default files in MongoDB if not already present. (Zip download removed.)
+        Register default files in MongoDB if not already present. 
         Args:
             uploads_base_path: Base path for uploads directory
         """
-        if not self.nextcloud_url:
-            print("NEXTCLOUD_URL not configured, skipping default files registration")
+        if not self.cloud:
+            print("Cloud service not configured, skipping default files registration")
             return
 
         # Check if default files already exist in database
@@ -52,7 +48,7 @@ class FileService:
         try:
             self._ensure_directory(default_dir)
             self._register_files_in_database(default_dir)
-            print("Successfully registered default files (zip download skipped)")
+            print("Successfully registered default files")
         except Exception as e:
             print(f"Error registering default files: {e}")
 

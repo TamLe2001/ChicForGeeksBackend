@@ -66,7 +66,9 @@ def create_app():
     # Register blueprints
     register_blueprints(app)
     
-    # Initialize file service
+    # Initialize file service and cloud service
+    from api.services.file_service import FileService
+    from api.services.cloud_service import CloudService
     with app.app_context():
         try:
             file_service = FileService(app.db, app.config)
@@ -74,7 +76,11 @@ def create_app():
             file_service.download_default_files(uploads_path)
         except Exception as e:
             print(f"⚠ Warning: Failed to initialize default files: {e}")
-    
+        try:
+            app.cloud_service = CloudService(app.db, app.config)
+            print("CloudService initialized and attached to app as app.cloud_service")
+        except Exception as e:
+            print(f"⚠ Warning: Failed to initialize CloudService: {e}")
     return app
 
 
