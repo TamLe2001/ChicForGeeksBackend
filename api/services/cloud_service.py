@@ -141,6 +141,18 @@ class CloudService:
         if hasattr(stream, "seek"):
             stream.seek(0)
 
+        original_filename = (getattr(file, "filename", "") or "").lower()
+        original_mime = (getattr(file, "content_type", "") or "").lower()
+        is_jpeg = original_filename.endswith((".jpg", ".jpeg")) or original_mime == "image/jpeg"
+
+        if is_jpeg:
+            payload = {
+                "stream": stream,
+                "content_type": "image/jpeg",
+                "content_length": getattr(file, "content_length", None) or 0,
+            }
+            return payload, output_filename, None, None
+
         try:
             with Image.open(stream) as image:
                 rgb_image = image.convert("RGB")
