@@ -50,6 +50,7 @@ class CloudService:
         if not ok:
             return err, code
         
+        
     def upload_fbx(self, file, filename):
         """Upload FBX file to NextCloud and save metadata in database."""
         ok, err, code = self._nextcloud_configured()
@@ -68,19 +69,21 @@ class CloudService:
         if not ok:
             return err, code
         
-    def get_url_image_profile(self, filename):
+    def get_url_image_profile(self, user_id):
         """Get public URL for an image stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
-    
+        return f"{self.nextcloud_url}profile_pictures/{user_id}.jpg"
+
     
     def get_url_fbx(self, filename):
         """Get public URL for an FBX file stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
-        
+        return f"{self.nextcloud_url}fbx/{filename}"
+    
     def get_url_garment_default(self, garment_name):
         """Get public URL for a garment file stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()

@@ -1,12 +1,11 @@
 """Routes for garment management."""
 
 from api.models.garment.accessory import Accessory
-from flask import Blueprint, current_app, g, jsonify, request, send_file
+from flask import Blueprint, Response, current_app, g, jsonify, request, stream_with_context
 from api.models.garment import Shirt, Pants, Skirt, Accessory
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
-import os
-from io import BytesIO
+from werkzeug.utils import secure_filename
 import requests
 
 garments_bp = Blueprint("garments", __name__)
@@ -50,51 +49,59 @@ def get_default_garments():
 	except Exception as e:
 		return jsonify({'error': f'Server error: {str(e)}'}), 500
      
-@garments_bp.get('/default-glb/<file_name>')
+@garments_bp.get('/default-glb/<path:file_name>')
 def get_default_glb(file_name):
     """Download file directly from NextCloud default folder"""
     try:
-        # Get NextCloud credentials from environment
-        cloud = current_app.cloud_service      
+        cloud = current_app.cloud_service
         
         if not cloud.nextcloud_url:
             return jsonify({'error': 'NextCloud not configured'}), 500
+
+        safe_file_name = secure_filename(file_name)
+        if not safe_file_name:
+            return jsonify({'error': 'Invalid file name'}), 400
         
-        # Normalize URL to ensure it ends with slash
-        if not cloud.nextcloud_url.endswith('/'):
-            cloud.nextcloud_url = f"{cloud.nextcloud_url}/"
+        cloud_url = cloud.get_url_garment_default(safe_file_name)
         
-        # Construct cloud URL
-        cloud_url = cloud.get_url_garment_default(file_name)
-        
-        # Download file from NextCloud
         auth = (cloud.nextcloud_user, cloud.nextcloud_pass) if cloud.nextcloud_user and cloud.nextcloud_pass else None
         response = requests.get(
             cloud_url,
             auth=auth,
-            timeout=30
+            stream=True,
+            timeout=(5, 60),
         )
         
         if response.status_code == 404:
             return jsonify({'error': 'File not found in cloud storage'}), 404
         
         if response.status_code != 200:
-            return jsonify({'error': f'Failed to download file from cloud: {response.status_code}'}), 500
+            response.close()
+            return jsonify({'error': f'Failed to download file from cloud: {response.status_code}'}), 502
         
-        # Detect content type from response headers or filename
         content_type = response.headers.get('Content-Type', 'application/octet-stream')
-        
-        # Return file as download
-        return send_file(
-            BytesIO(response.content),
-            mimetype=content_type,
-            as_attachment=True,
-            download_name=file_name
-        )
+        content_length = response.headers.get('Content-Length')
+
+        def generate():
+            try:
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+
+        headers = {
+            'Content-Type': content_type,
+            'Cache-Control': 'public, max-age=86400',
+        }
+        if content_length:
+            headers['Content-Length'] = content_length
+
+        return Response(stream_with_context(generate()), headers=headers, status=200)
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Download timeout - file may be too large or network issues'}), 504
     except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'Download failed: {str(e)}'}), 500
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
     except Exception as e:
         return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
      
