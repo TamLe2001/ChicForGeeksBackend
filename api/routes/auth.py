@@ -83,7 +83,8 @@ def role_required(*roles):
 
 @auth_bp.post('/auth/register')
 def register():
-	payload = request.get_json(silent=True) or {}
+	payload = request.get_json(silent=True) if request.is_json else request.form.to_dict()
+	payload = payload or {}
 	name = payload.get('name')
 	email = payload.get('email')
 	password = payload.get('password')
@@ -94,17 +95,30 @@ def register():
 	if current_app.db.users.find_one({'email': email}):
 		return jsonify({'error': 'email already registered'}), 409
 
+	user_id = ObjectId()
+	profile_picture = payload.get('profile_picture')
+	profile_file = request.files.get('profile_picture')
+	if profile_file and profile_file.filename:
+		cloud = getattr(current_app, 'cloud_service', None)
+		if not cloud:
+			return jsonify({'error': 'cloud service not available'}), 500
+		upload_result, upload_code = cloud.upload_image_profile(profile_file, str(user_id), 'profile.jpg')
+		if upload_code != 201:
+			return jsonify(upload_result), upload_code
+		profile_picture = upload_result.get('cloud_url')
+
 	# Create user instance
 	user = User(
 		name=name,
 		email=email,
-		profile_picture=payload.get('profile_picture'),
+		profile_picture=profile_picture,
 		bio=payload.get('bio', ''),
 		birthday=payload.get('birthday'),
 	)
 	user.set_password(password)
 
 	user_doc = {
+		'_id': user_id,
 		'name': user.name.strip(),
 		'email': user.email.strip(),
 		'password_hash': user.password_hash,

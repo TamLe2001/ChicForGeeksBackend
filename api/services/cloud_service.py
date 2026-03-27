@@ -1,4 +1,11 @@
+from datetime import datetime
+from io import BytesIO
 from typing import Optional
+
+import requests
+from PIL import Image
+from requests.auth import HTTPBasicAuth
+from werkzeug.utils import secure_filename
 
 from api.models.garment.garment import Garment
 
@@ -36,47 +43,153 @@ class CloudService:
         if not self.nextcloud_url:
             missing.append("NEXTCLOUD_URL")
         if not self.nextcloud_user:
-            missing.append("NEXTCLOUD_USER")
+            missing.append("NEXTCLOUD_USER") 
         if not self.nextcloud_pass:
             missing.append("NEXTCLOUD_PASS")
         if missing:
             return False, {"error": f"NextCloud not configured: missing {', '.join(missing)}"}, 500
         return True, None, None
-     
 
-    def upload_image(self, file, filename):
-        """Upload image to NextCloud and save metadata in database."""
+    def _ensure_remote_folder(self, folder: str) -> tuple[bool, Optional[dict], Optional[int]]:
+        """Create NextCloud folder tree if it does not exist."""
+        folder = folder.strip("/")
+        if not folder:
+            return True, None, None
+
+        current_path = ""
+        for part in folder.split("/"):
+            current_path = f"{current_path}/{part}" if current_path else part
+            folder_url = f"{self.nextcloud_url}{current_path}/"
+            response = requests.request(
+                "MKCOL",
+                folder_url,
+                auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
+                timeout=10,
+            )
+
+            if response.status_code not in (201, 405):
+                return (
+                    False,
+                    {"error": f"Failed to create cloud folder '{current_path}': {response.status_code}"},
+                    500,
+                )
+
+        return True, None, None
+
+    def _upload_to_folder(self, file, filename: str, folder: str, file_type: str):
+        """Upload a file object to a specific NextCloud folder and persist metadata."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
+
+        safe_filename = secure_filename(filename or "")
+        if not safe_filename:
+            return {"error": "Invalid filename"}, 400
+
+        ok, err, code = self._ensure_remote_folder(folder)
+        if not ok:
+            return err, code
+
+        upload_url = f"{self.nextcloud_url}{folder.strip('/')}/{safe_filename}"
+        content_type = getattr(file, "content_type", None) or "application/octet-stream"
+        stream = getattr(file, "stream", file)
+
+        if hasattr(stream, "seek"):
+            stream.seek(0)
+
+        response = requests.put(
+            upload_url,
+            data=stream,
+            auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
+            headers={"Content-Type": content_type},
+            timeout=30,
+        )
+
+        if response.status_code not in (201, 204):
+            return {
+                "error": f"NextCloud error: {response.status_code}",
+                "details": response.text,
+            }, 500
+
+        file_doc = {
+            "filename": safe_filename,
+            "url": upload_url,
+            "size": getattr(file, "content_length", None) or 0,
+            "content_type": content_type,
+            "uploaded_at": datetime.utcnow(),
+            "file_type": file_type,
+            "folder": folder.strip("/"),
+        }
+        result = self.db.files.insert_one(file_doc)
+
+        return {
+            "status": "success",
+            "message": f"{file_type.capitalize()} uploaded successfully",
+            "file_id": str(result.inserted_id),
+            "filename": safe_filename,
+            "cloud_url": upload_url,
+            "file_type": file_type,
+        }, 201
+    
+    def _image_handler(self, file, filename: str):
+        """Convert any supported image file to JPG and return a stream payload."""
+        safe_base = secure_filename((filename or "image").rsplit(".", 1)[0]) or "image"
+        output_filename = f"{safe_base}.jpg"
+
+        stream = getattr(file, "stream", file)
+        if hasattr(stream, "seek"):
+            stream.seek(0)
+
+        try:
+            with Image.open(stream) as image:
+                rgb_image = image.convert("RGB")
+                out_buffer = BytesIO()
+                rgb_image.save(out_buffer, format="JPEG", quality=90, optimize=True)
+                out_buffer.seek(0)
+        except Exception:
+            return None, None, {"error": "Invalid or unsupported image file"}, 400
+
+        payload = {
+            "stream": out_buffer,
+            "content_type": "image/jpeg",
+            "content_length": len(out_buffer.getvalue()),
+        }
+        return payload, output_filename, None, None
+     
+
+    def upload_image_profile(self, file, user_id, filename="profile.jpg"):
+        """Upload image to NextCloud and save metadata in database."""
+        payload, jpg_filename, err, code = self._image_handler(file, filename)
+        if err:
+            return err, code
+        return self._upload_to_folder(payload, jpg_filename, f"profile_pictures/{user_id}", "profile_image")
         
+    def upload_image(self, file, filename):
+        """Upload image to NextCloud and save metadata in database."""
+        payload, jpg_filename, err, code = self._image_handler(file, filename)
+        if err:
+            return err, code
+        return self._upload_to_folder(payload, jpg_filename, "images", "image")
         
     def upload_fbx(self, file, filename):
         """Upload FBX file to NextCloud and save metadata in database."""
-        ok, err, code = self._nextcloud_configured()
-        if not ok:
-            return err, code
+        return self._upload_to_folder(file, filename, "fbx", "fbx")
         
     def upload_garment(self, file, filename):
         """Upload garment file to NextCloud and save metadata in database."""
-        ok, err, code = self._nextcloud_configured()
-        if not ok:
-            return err, code
+        return self._upload_to_folder(file, filename, "garments", "garment")
         
     def upload_outfit(self, file, filename):
         """Upload outfit file to NextCloud and save metadata in database."""
-        ok, err, code = self._nextcloud_configured()
-        if not ok:
-            return err, code
+        return self._upload_to_folder(file, filename, "outfits", "outfit")
         
     def get_url_image_profile(self, user_id):
         """Get public URL for an image stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
-        return f"{self.nextcloud_url}profile_pictures/{user_id}.jpg"
+        return f"{self.nextcloud_url}profile_pictures/{user_id}/profile.jpg"
 
-    
     def get_url_fbx(self, filename):
         """Get public URL for an FBX file stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
