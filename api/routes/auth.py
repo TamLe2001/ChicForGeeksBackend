@@ -102,7 +102,7 @@ def register():
 		cloud = getattr(current_app, 'cloud_service', None)
 		if not cloud:
 			return jsonify({'error': 'cloud service not available'}), 500
-		upload_result, upload_code = cloud.upload_image_profile(profile_file, str(user_id), 'profile.jpg')
+		upload_result, upload_code = cloud.upload_image_profile(profile_file, str(user_id))
 		if upload_code != 201:
 			return jsonify(upload_result), upload_code
 		profile_picture = upload_result.get('cloud_url')
