@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from api.models.garment import Shirt, Pants, Skirt, Accessory
+from api.models.garment.enums.gender import Gender
 
 
 class Outfit:
@@ -10,6 +11,7 @@ class Outfit:
 		self,
 		name: str,
 		user_id: str,
+		gender: Gender,
 		bio: Optional[str] = None,
 		shirt: Optional[Shirt] = None,
 		pants: Optional[Pants] = None,
@@ -24,6 +26,7 @@ class Outfit:
 		Args:
 			name: Outfit name
 			user_id: User ID who created this outfit
+			gender: Gender of the outfit
 			bio: Outfit description/bio
 			shirt: Shirt garment instance
 			pants: Pants garment instance
@@ -34,6 +37,7 @@ class Outfit:
 		"""
 		self.name = name
 		self.user_id = user_id
+		self.gender = gender
 		self.bio = bio
 		self.shirt = shirt
 		self.pants = pants
@@ -52,6 +56,7 @@ class Outfit:
 		return Outfit(
 			name=payload.get('name'),
 			user_id=payload.get('user_id'),
+			gender=Gender(payload.get('gender')) if payload.get('gender') else None,
 			bio=payload.get('bio'),
 			shirt=Shirt.from_dict(payload.get('shirt')) if payload.get('shirt') else None,
 			pants=Pants.from_dict(payload.get('pants')) if payload.get('pants') else None,
@@ -70,6 +75,7 @@ class Outfit:
 		outfit = Outfit(
 			name=outfit_doc.get('name'),
 			user_id=outfit_doc.get('user_id'),
+			gender=Gender(outfit_doc.get('gender')) if outfit_doc.get('gender') else None,
 			bio=outfit_doc.get('bio'),
 			shirt=Shirt.from_dict(outfit_doc.get('shirt')) if outfit_doc.get('shirt') else None,
 			pants=Pants.from_dict(outfit_doc.get('pants')) if outfit_doc.get('pants') else None,
@@ -88,6 +94,7 @@ class Outfit:
 			'name': self.name,
 			'user_id': self.user_id,
 			'bio': self.bio,
+			'gender': self.gender.value if self.gender else None,
 			'shirt': self.shirt.to_dict() if self.shirt else None,
 			'pants': self.pants.to_dict() if self.pants else None,
 			'skirt': self.skirt.to_dict() if self.skirt else None,

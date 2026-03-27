@@ -68,11 +68,12 @@ class CloudService:
         if not ok:
             return err, code
         
-    def get_url_image(self, filename):
+    def get_url_image_profile(self, filename):
         """Get public URL for an image stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
+    
     
     def get_url_fbx(self, filename):
         """Get public URL for an FBX file stored in NextCloud."""
@@ -96,9 +97,3 @@ class CloudService:
         
         return f"{self.nextcloud_url}garments/{garment.get_type()}/{garment.id}"
       
-
-    def get_url_outfit(self, filename):
-        """Get public URL for an outfit file stored in NextCloud."""
-        ok, err, code = self._nextcloud_configured()
-        if not ok:
-            return err, code

@@ -65,6 +65,7 @@ def create_outfit():
 		outfit_doc = {
 			'name': outfit.name,
 			'user_id': outfit.user_id,
+			'gender': outfit.gender,
 			'bio': outfit.bio,
 			'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
 			'pants': outfit.pants.to_dict() if outfit.pants else None,
