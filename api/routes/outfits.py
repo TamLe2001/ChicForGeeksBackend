@@ -69,6 +69,8 @@ def create_outfit():
 			'bio': outfit.bio,
 			'shirt': outfit.shirt.to_dict() if outfit.shirt else None,
 			'pants': outfit.pants.to_dict() if outfit.pants else None,
+			'skirt': outfit.skirt.to_dict() if outfit.skirt else None,
+			'accessory': outfit.accessory.to_dict() if outfit.accessory else None,
 			'published': outfit.published,
 			'created_at': outfit.created_at,
 		}
