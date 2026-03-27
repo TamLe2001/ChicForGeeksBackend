@@ -157,12 +157,12 @@ class CloudService:
         return payload, output_filename, None, None
      
 
-    def upload_image_profile(self, file, user_id, filename="profile.jpg"):
+    def upload_image_profile(self, file, user_id):
         """Upload image to NextCloud and save metadata in database."""
-        payload, jpg_filename, err, code = self._image_handler(file, filename)
+        payload, jpg_filename, err, code = self._image_handler(file, f"{user_id}.jpg")
         if err:
             return err, code
-        return self._upload_to_folder(payload, jpg_filename, f"profile_pictures/{user_id}", "profile_image")
+        return self._upload_to_folder(payload, jpg_filename, "profile_pictures", "profile_image")
         
     def upload_image(self, file, filename):
         """Upload image to NextCloud and save metadata in database."""

@@ -6,7 +6,10 @@ from pymongo import ASCENDING, DESCENDING, MongoClient
 from api.config import Config
 from api.routes import register_blueprints
 from api.middleware.error_handler import handle_errors
-from api.services import FileService
+
+# Initialize file service and cloud service
+from api.services.file_service import FileService
+from api.services.cloud_service import CloudService
 
 
 def ensure_indexes(db):
@@ -66,9 +69,6 @@ def create_app():
     # Register blueprints
     register_blueprints(app)
     
-    # Initialize file service and cloud service
-    from api.services.file_service import FileService
-    from api.services.cloud_service import CloudService
     with app.app_context():
         try:
             file_service = FileService(app.db, app.config)
