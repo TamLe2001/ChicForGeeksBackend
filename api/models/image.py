@@ -5,5 +5,6 @@ from enum import Enum
 
 class Image(str, Enum):
     """Image options for garments."""
-    PROFILE = "profile"
+    PROFILE = "profile_picture"
     CUSTOM = "custom"
+    REGULAR = "image"

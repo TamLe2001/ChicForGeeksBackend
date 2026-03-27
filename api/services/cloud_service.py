@@ -8,6 +8,7 @@ from requests.auth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 
 from api.models.garment.garment import Garment
+from api.models.image import Image as ImageType
 
 class CloudService:
     """Service for managing file in cloud storage."""
@@ -162,14 +163,14 @@ class CloudService:
         payload, jpg_filename, err, code = self._image_handler(file, f"{user_id}.jpg")
         if err:
             return err, code
-        return self._upload_to_folder(payload, jpg_filename, "profile_pictures", "profile_image")
+        return self._upload_to_folder(payload, jpg_filename, "profile_pictures", ImageType.PROFILE.value)
         
     def upload_image(self, file, filename):
         """Upload image to NextCloud and save metadata in database."""
         payload, jpg_filename, err, code = self._image_handler(file, filename)
         if err:
             return err, code
-        return self._upload_to_folder(payload, jpg_filename, "images", "image")
+        return self._upload_to_folder(payload, jpg_filename, "images", ImageType.REGULAR.value)
         
     def upload_fbx(self, file, filename):
         """Upload FBX file to NextCloud and save metadata in database."""
