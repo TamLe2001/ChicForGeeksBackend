@@ -1,7 +1,10 @@
 from bson import ObjectId
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 from api.models.user import User
 from api.routes.auth import token_required
+from io import BytesIO
+import requests
+from requests.auth import HTTPBasicAuth
 
 users_bp = Blueprint('users', __name__)
 
@@ -86,3 +89,42 @@ def delete_user(user_id):
 		return jsonify({'error': 'user not found'}), 404
 
 	return jsonify({'status': 'deleted'}), 200
+
+
+@users_bp.get('/users/<user_id>/profile-picture')
+def get_user_profile_picture(user_id):
+	"""Serve profile picture from NextCloud, bypassing CORS restrictions."""
+	try:
+		oid = ObjectId(user_id)
+	except Exception:
+		return jsonify({'error': 'invalid user id'}), 400
+
+	user = current_app.db.users.find_one({'_id': oid})
+	if not user or not user.get('profile_picture'):
+		return jsonify({'error': 'profile picture not found'}), 404
+
+	cloud = getattr(current_app, 'cloud_service', None)
+	if not cloud:
+		return jsonify({'error': 'cloud service not available'}), 500
+
+	try:
+		response = requests.get(
+			user.get('profile_picture'),
+			auth=HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass),
+			timeout=30
+		)
+		if response.status_code != 200:
+			return jsonify({'error': 'failed to fetch profile picture'}), 500
+
+		content_type = response.headers.get('Content-Type', 'image/jpeg')
+		return send_file(
+			BytesIO(response.content),
+			mimetype=content_type,
+			download_name=f"profile_{user_id}.jpg"
+		)
+	except requests.exceptions.Timeout:
+		return jsonify({'error': 'download timeout'}), 504
+	except requests.exceptions.RequestException as e:
+		return jsonify({'error': f'failed to download: {str(e)}'}), 500
+	except Exception as e:
+		return jsonify({'error': f'server error: {str(e)}'}), 500
