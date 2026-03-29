@@ -92,8 +92,19 @@ class CloudService:
             return err, code
 
         upload_url = f"{self.nextcloud_url}{folder.strip('/')}/{safe_filename}"
-        content_type = getattr(file, "content_type", None) or "application/octet-stream"
-        stream = getattr(file, "stream", file)
+
+        # Support both Werkzeug FileStorage objects and normalized dict payloads.
+        if isinstance(file, dict):
+            content_type = file.get("content_type") or "application/octet-stream"
+            stream = file.get("stream")
+            content_length = file.get("content_length") or 0
+        else:
+            content_type = getattr(file, "content_type", None) or "application/octet-stream"
+            stream = getattr(file, "stream", file)
+            content_length = getattr(file, "content_length", None) or 0
+
+        if stream is None:
+            return {"error": "Invalid file payload"}, 400
 
         if hasattr(stream, "seek"):
             stream.seek(0)
@@ -115,7 +126,7 @@ class CloudService:
         file_doc = {
             "filename": safe_filename,
             "url": upload_url,
-            "size": getattr(file, "content_length", None) or 0,
+            "size": content_length,
             "content_type": content_type,
             "uploaded_at": datetime.utcnow(),
             "file_type": file_type,
