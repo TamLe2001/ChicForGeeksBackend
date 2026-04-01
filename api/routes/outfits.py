@@ -37,6 +37,80 @@ def _get_outfit_doc_or_404(outfit_id):
 	return outfit, None
 
 
+@outfits_bp.get('/outfits/published')
+def get_published_outfits():
+
+	try:
+		limit = request.args.get('limit', 100, type=int)
+		skip = request.args.get('skip', 0, type=int)
+		
+		limit = min(abs(limit), 100) if limit > 0 else 100
+		skip = max(0, skip)
+		
+		print(f"[GET /api/outfits/published] Fetching published outfits (limit={limit}, skip={skip})", flush=True)
+		
+		pipeline = [
+			{'$match': {'published': True}},
+			{'$sort': {'created_at': -1}},
+			{'$skip': skip},
+			{'$limit': limit},
+			{
+				'$lookup': {
+					'from': 'users',
+					'localField': 'user_id',
+					'foreignField': '_id',
+					'as': 'user_data'
+				}
+			},
+			{
+				'$addFields': {
+					'user': {'$arrayElemAt': ['$user_data', 0]}
+				}
+			},
+			{
+				'$project': {
+					'_id': 1,
+					'name': 1,
+					'gender': 1,
+					'bio': 1,
+					'shirt': 1,
+					'pants': 1,
+					'skirt': 1,
+					'accessory': 1,
+					'user_id': 1,
+					'published': 1,
+					'created_at': 1,
+					'user_name': '$user.name',
+					'user_profile_pic': '$user.profile_picture'
+				}
+			}
+		]
+		
+		results = list(current_app.db.outfits.aggregate(pipeline))
+		print(f"[GET /api/outfits/published] Found {len(results)} published outfits", flush=True)
+		
+		outfits = []
+		for doc in results:
+			user_name = doc.get('user_name')
+			user_profile_pic = doc.get('user_profile_pic')
+			user_id = doc.get('user_id')
+			
+			outfit_dict = Outfit.from_doc(doc).to_dict()
+			
+			outfit_dict['userId'] = str(user_id) if user_id else None
+			outfit_dict['userName'] = user_name
+			outfit_dict['userProfilePic'] = user_profile_pic
+			outfits.append(outfit_dict)
+		
+		return jsonify(outfits), 200
+		
+	except Exception as e:
+		print(f"[GET /api/outfits/published] ERROR: {str(e)}", flush=True)
+		import traceback
+		print(f"[GET /api/outfits/published] Traceback: {traceback.format_exc()}", flush=True)
+		return jsonify({'error': 'Failed to retrieve published outfits'}), 500
+
+
 @outfits_bp.get('/outfits')
 def list_outfits():
 	user_id = request.args.get('user_id')
