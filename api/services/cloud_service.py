@@ -188,12 +188,12 @@ class CloudService:
             return err, code
         return self._upload_to_folder(payload, jpg_filename, "profile_pictures", ImageType.PROFILE.value)
         
-    def upload_image(self, file, filename):
+    def upload_image_custom(self, file, filename):
         """Upload image to NextCloud and save metadata in database."""
         payload, jpg_filename, err, code = self._image_handler(file, filename)
         if err:
             return err, code
-        return self._upload_to_folder(payload, jpg_filename, "images", ImageType.REGULAR.value)
+        return self._upload_to_folder(payload, jpg_filename, "images", ImageType.CUSTOM.value)
         
     def upload_fbx(self, file, filename):
         """Upload FBX file to NextCloud and save metadata in database."""
