@@ -94,6 +94,8 @@ def register():
 
 	if current_app.db.users.find_one({'email': email}):
 		return jsonify({'error': 'email already registered'}), 409
+	if current_app.db.users.find_one({'name': name}):
+		return jsonify({'error': 'name already registered'}), 409
 
 	user_id = ObjectId()
 	profile_picture = payload.get('profile_picture')
