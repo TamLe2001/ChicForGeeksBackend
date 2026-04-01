@@ -6,7 +6,6 @@ from api.routes.outfits import outfits_bp
 from api.routes.follows import follows_bp
 from api.routes.files import files_bp
 from api.routes.chicforgeeksAR import chicforgeeks_ar_bp
-from api.routes.retexture import retexture_bp
 from api.routes.garments import garments_bp
 from api.routes.wardrobes import wardrobes_bp
 
@@ -21,7 +20,6 @@ def register_blueprints(app):
         wardrobes_bp,
         files_bp,
         chicforgeeks_ar_bp,
-        retexture_bp,
         garments_bp,
     ]
     
@@ -37,7 +35,6 @@ __all__ = [
     'wardrobes_bp',
     'files_bp',
     'chicforgeeks_ar_bp',
-    'retexture_bp',
     'garments_bp',
     'register_blueprints',
 ]
