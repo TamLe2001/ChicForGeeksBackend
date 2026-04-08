@@ -19,7 +19,6 @@ def _seed_default_garments(db):
             "display_name": "Fitted Black Tshirt",
             "gender": "female",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -28,7 +27,6 @@ def _seed_default_garments(db):
             "display_name": "Fitted White Tshirt",
             "gender": "female",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -37,7 +35,6 @@ def _seed_default_garments(db):
             "display_name": "Black Longsleeve",
             "gender": "female",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -46,7 +43,6 @@ def _seed_default_garments(db):
             "display_name": "White Longsleeve",
             "gender": "female",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -55,7 +51,6 @@ def _seed_default_garments(db):
             "display_name": "White Tshirt",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -64,7 +59,6 @@ def _seed_default_garments(db):
             "display_name": "Black Tshirt",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -73,7 +67,6 @@ def _seed_default_garments(db):
             "display_name": "White Longsleeve",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "shirt",
@@ -82,7 +75,6 @@ def _seed_default_garments(db):
             "display_name": "Black Longsleeve",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
     ]
 
@@ -95,7 +87,6 @@ def _seed_default_garments(db):
             "display_name": "Baggy Black Pants",
             "gender": "female",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -104,7 +95,6 @@ def _seed_default_garments(db):
             "display_name": "Baggy Denim Pants",
             "gender": "female",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -113,7 +103,6 @@ def _seed_default_garments(db):
             "display_name": "Baggy Camo Pants",
             "gender": "female",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -122,7 +111,6 @@ def _seed_default_garments(db):
             "display_name": "Leggings",
             "gender": "female",
             "style": "sporty",
-            "published": True,
         },
         {
             "type": "pants",
@@ -131,7 +119,6 @@ def _seed_default_garments(db):
             "display_name": "Black Shorts",
             "gender": "female",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -140,7 +127,6 @@ def _seed_default_garments(db):
             "display_name": "Camo Shorts",
             "gender": "female",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -149,7 +135,6 @@ def _seed_default_garments(db):
             "display_name": "Black Pants",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "pants",
@@ -158,7 +143,6 @@ def _seed_default_garments(db):
             "display_name": "Denim Pants",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "pants",
@@ -167,7 +151,6 @@ def _seed_default_garments(db):
             "display_name": "Camo Pants",
             "gender": "male",
             "style": "streetwear",
-            "published": True,
         },
         {
             "type": "pants",
@@ -176,7 +159,6 @@ def _seed_default_garments(db):
             "display_name": "Black Shorts",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "pants",
@@ -185,7 +167,6 @@ def _seed_default_garments(db):
             "display_name": "Denim Shorts",
             "gender": "male",
             "style": "casual",
-            "published": True,
         },
         {
             "type": "pants",
@@ -194,7 +175,6 @@ def _seed_default_garments(db):
             "display_name": "Camo Shorts",
             "gender": "male",
             "style": "streetwear",
-            "published": True,
         },
     ]
 
@@ -207,7 +187,6 @@ def _seed_default_garments(db):
             "display_name": "Long Lace Skirt",
             "gender": "female",
             "style": "formal",
-            "published": True,
         },
         {
             "type": "skirt",
@@ -216,7 +195,6 @@ def _seed_default_garments(db):
             "display_name": "Long White Skirt",
             "gender": "female",
             "style": "formal",
-            "published": True,
         },
         {
             "type": "skirt",
@@ -225,7 +203,6 @@ def _seed_default_garments(db):
             "display_name": "A-line Black Skirt",
             "gender": "female",
             "style": "formal",
-            "published": True,
         },
         {
             "type": "skirt",
@@ -234,7 +211,6 @@ def _seed_default_garments(db):
             "display_name": "Short Black Skirt",
             "gender": "female",
             "style": "formal",
-            "published": True,
         },
     ]
 
@@ -247,7 +223,6 @@ def _seed_default_garments(db):
             "display_name": "Lace Skirt Accessory",
             "gender": "female",
             "style": "y2k",
-            "published": True,
         },
     ]
 
@@ -262,6 +237,9 @@ def _seed_default_garments(db):
                     **garment,
                     "updated_at": now,
                     "user_id": "default",
+                },
+                "$unset": {
+                    "published": "",
                 },
                 "$setOnInsert": {
                     "created_at": now,
