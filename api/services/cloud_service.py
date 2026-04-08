@@ -213,6 +213,13 @@ class CloudService:
         if not ok:
             return err, code
         return f"{self.nextcloud_url}profile_pictures/{user_id}/profile.jpg"
+    
+    def get_url_custom(self, user_id, filename):
+        """Get public URL for an image stored in NextCloud."""
+        ok, err, code = self._nextcloud_configured()
+        if not ok:
+            return err, code
+        return f"{self.nextcloud_url}{user_id}/{filename}"
 
     def get_url_fbx(self, filename):
         """Get public URL for an FBX file stored in NextCloud."""

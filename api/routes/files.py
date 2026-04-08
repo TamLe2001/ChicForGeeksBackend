@@ -1,9 +1,11 @@
-from flask import Blueprint, request, current_app, send_file, send_from_directory
+from flask import Blueprint, Response, jsonify, request, current_app, send_file, send_from_directory, stream_with_context
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from io import BytesIO
 import os
+from werkzeug.utils import secure_filename
+
 
 files_bp = Blueprint('files', __name__)
 
@@ -313,3 +315,61 @@ def serve_uploads(filepath):
     """Serve uploaded files from the uploads directory."""
     upload_dir = os.path.join(current_app.root_path, '..', 'uploads')
     return send_from_directory(upload_dir, filepath)
+
+
+@files_bp.post('/images')
+def get_custom_image():
+    """Download file directly from NextCloud custom folder"""
+    try:
+        cloud = current_app.cloud_service
+        
+        if not cloud.nextcloud_url:
+            return jsonify({'error': 'NextCloud not configured'}), 500
+
+        safe_file_name = secure_filename(request.json.get('filename'))
+        user_id = request.json.get('user_id')
+        if not safe_file_name or not user_id:
+            return jsonify({'error': 'Invalid file name or user ID'}), 400
+        
+        cloud_url = cloud.get_url_custom(user_id, safe_file_name)
+        
+        auth = (cloud.nextcloud_user, cloud.nextcloud_pass) if cloud.nextcloud_user and cloud.nextcloud_pass else None
+        response = requests.get(
+            cloud_url,
+            auth=auth,
+            stream=True,
+            timeout=(5, 60),
+        )
+        
+        if response.status_code == 404:
+            return jsonify({'error': 'File not found in cloud storage'}), 404
+        
+        if response.status_code != 200:
+            response.close()
+            return jsonify({'error': f'Failed to download file from cloud: {response.status_code}'}), 502
+        
+        content_type = response.headers.get('Content-Type', 'application/octet-stream')
+        content_length = response.headers.get('Content-Length')
+
+        def generate():
+            try:
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+
+        headers = {
+            'Content-Type': content_type,
+            'Cache-Control': 'public, max-age=86400',
+        }
+        if content_length:
+            headers['Content-Length'] = content_length
+
+        return Response(stream_with_context(generate()), headers=headers, status=200)
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Download timeout - file may be too large or network issues'}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
+    except Exception as e:
+        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
