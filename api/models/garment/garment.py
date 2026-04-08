@@ -50,7 +50,6 @@ class Garment(ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert garment to dictionary for database storage."""
-        model_url = self.reference
         if self.is_custom and self.id:
             try:
                 model_url = url_for(

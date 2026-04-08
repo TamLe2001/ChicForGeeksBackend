@@ -208,30 +208,13 @@ def create_garment():
 
         # Create appropriate garment type with type-specific fields
         if garment_type == "shirt":
-            garment = Shirt(
-                **common_kwargs,
-                sleeve_type=payload.get("sleeve_type", "short"),
-                pattern=payload.get("pattern", "solid"),
-            )
+            garment = Shirt(**common_kwargs,)
         elif garment_type == "pants":
-            garment = Pants(
-                **common_kwargs,
-                fit=payload.get("fit", "regular"),
-                length=payload.get("length", "full"),
-                material=payload.get("material", "cotton"),
-            )
+            garment = Pants(**common_kwargs)
         elif garment_type == "skirt":
-            garment = Skirt(
-                **common_kwargs,
-                length=payload.get("length", "knee"),
-                material=payload.get("material", "cotton"),
-            )
+            garment = Skirt(**common_kwargs)
         elif garment_type == "accessory" or garment_type == "accessories":
-            garment = Accessory(
-                **common_kwargs,
-                accessory_type=payload.get("accessory_type", "generic"),
-                material=payload.get("material", "mixed"),
-            )
+            garment = Accessory(**common_kwargs)
         else:
             return jsonify({"error": f"unknown garment type: {garment_type}"}), 400
 
