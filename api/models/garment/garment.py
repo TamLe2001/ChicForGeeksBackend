@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
-from flask import url_for
 from .enums import Gender, Style
 
 class Garment(ABC):
@@ -15,6 +14,7 @@ class Garment(ABC):
         user_id: str,
         gender: Gender,
         style: Style,
+        model_url: Optional[str] = None,
         display_name: Optional[str] = None,
         reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
@@ -30,6 +30,7 @@ class Garment(ABC):
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
             style: Genre or category (Style enum)
+            model_url: URL or path to the garment model
             display_name: Name to display for the garment (defaults to name if not provided)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
@@ -41,6 +42,7 @@ class Garment(ABC):
         self.user_id = user_id
         self.gender = gender if isinstance(gender, Gender) else Gender(str(gender).lower())
         self.style = style if isinstance(style, Style) else Style(str(style).lower())
+        self.model_url = model_url
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
@@ -50,16 +52,6 @@ class Garment(ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert garment to dictionary for database storage."""
-        if self.is_custom and self.id:
-            try:
-                model_url = url_for(
-                    "garments.download_custom_garment",
-                    garment_id=self.id,
-                    _external=True,
-                )
-            except RuntimeError:
-                model_url = self.reference
-
         return {
             "id": self.id or (str(self._id) if self._id else None),
             "type": self.get_type(),
@@ -68,7 +60,7 @@ class Garment(ABC):
             "gender": self.gender.value,
             "style": self.style.value,
             "reference": self.reference,
-            "model_url": model_url,
+            "model_url": self.model_url,
             "created_at": self.created_at,
             "is_custom": self.is_custom,
             "display_name": self.display_name,
