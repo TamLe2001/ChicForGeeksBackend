@@ -29,7 +29,7 @@ class Garment(ABC):
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
             style: Genre or category (Style enum)
-                display_name: Name to display for the garment (defaults to name if not provided)
+            display_name: Name to display for the garment (defaults to name if not provided)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
             is_custom: Flag indicating if the garment is custom
@@ -38,8 +38,8 @@ class Garment(ABC):
         """
         self.name = name
         self.user_id = user_id
-        self.gender = gender if isinstance(gender, Gender) else Gender(gender)
-        self.style = style if isinstance(style, Style) else Style(style)
+        self.gender = gender if isinstance(gender, Gender) else Gender(str(gender).lower())
+        self.style = style if isinstance(style, Style) else Style(str(style).lower())
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
