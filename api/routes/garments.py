@@ -106,7 +106,6 @@ def get_default_glb(file_name):
         return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
      
      
-
 @garments_bp.post("/garments")
 @token_required
 def create_garment():
@@ -297,6 +296,30 @@ def delete_garment(garment_id):
 
         service.delete_garment(garment_id)
         return jsonify({"status": "deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@garments_bp.get("/garments/user/<creator_id>")
+@token_required
+def get_garments_by_user(creator_id: str):
+    """Get all garments created by the authenticated user."""
+    user_id = str(g.current_user.get("_id"))
+    if creator_id != user_id:
+        return jsonify({"error": "not authorized to view these garments"}), 403
+
+    service = _get_garment_service()
+    try:
+        garments = service.get_garments_by_creator(creator_id)
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "count": len(garments),
+                    "garments": [garment.to_dict() for garment in garments],
+                }
+            ),
+            200,
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
