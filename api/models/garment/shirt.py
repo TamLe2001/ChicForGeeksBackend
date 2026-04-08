@@ -15,6 +15,7 @@ class Shirt(Garment):
             name=data.get("name"),
             user_id=data.get("user_id"),
             gender=data.get("gender"),
+            model_url=data.get("model_url"),
             reference=data.get("reference"),
             style=data.get("style"),
             created_at=data.get("created_at"),

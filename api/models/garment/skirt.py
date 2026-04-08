@@ -18,6 +18,7 @@ class Skirt(Garment):
             user_id=data.get("user_id"),
             gender= Gender.FEMALE,  # Skirts are typically associated with females
             style=data.get("style"),
+            model_url=data.get("model_url"),
             reference=data.get("reference"),
             created_at=data.get("created_at"),
             id=data.get("id") or data.get("_id"),
