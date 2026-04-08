@@ -14,7 +14,7 @@ class Garment(ABC):
         user_id: str,
         gender: Gender,
         style: Style,
-        display_name: str,
+        display_name: Optional[str] = None,
         reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
         is_custom: bool = False,
@@ -29,7 +29,7 @@ class Garment(ABC):
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
             style: Genre or category (Style enum)
-            display_name: Name to display for the garment
+                display_name: Name to display for the garment (defaults to name if not provided)
             reference: Reference URL or path to the garment model
             created_at: Creation timestamp
             is_custom: Flag indicating if the garment is custom
@@ -43,7 +43,7 @@ class Garment(ABC):
         self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
-        self.display_name = display_name
+        self.display_name = display_name or name  # Fallback to name if not provided
         self.id = id  # Custom id field from database
         self._id = None  # MongoDB _id field
 
