@@ -82,7 +82,7 @@ class GarmentService:
         Returns:
             List of default garments
         """
-        docs = list(self.collection.find({"default": True}).sort("created_at", -1))
+        docs = list(self.collection.find({"user_id": "default"}).sort("created_at", -1))
         garments = []
         for doc in docs:
             doc["_id"] = str(doc["_id"])
