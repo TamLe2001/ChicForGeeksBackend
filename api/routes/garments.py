@@ -7,6 +7,7 @@ from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 from werkzeug.utils import secure_filename
 import requests
+from uuid import uuid4
 
 garments_bp = Blueprint("garments", __name__)
 
@@ -189,6 +190,7 @@ def create_garment():
             "reference": payload.get("model_url") or payload.get("reference"),
             "display_name": payload.get("display_name"),
             "is_custom": True,  # Mark all garments created through this endpoint as custom
+            "id": uuid4().hex,
         }
         
         # Add optional common fields if present
@@ -235,6 +237,7 @@ def create_garment():
         service = _get_garment_service()
         garment_id = service.create_garment(garment)
         garment.id = garment_id
+        service.update_garment(garment_id, {"id": garment_id})
 
         return (
             jsonify(
