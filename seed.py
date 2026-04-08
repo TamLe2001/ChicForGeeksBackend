@@ -272,7 +272,6 @@ def seed_default_garments():
         # Create indexes on garment for faster queries
         db.garments.create_index([('user_id', ASCENDING)])
         db.garments.create_index([('default', ASCENDING)])
-        db.garments.create_index([('id', ASCENDING)], unique=True)
         
         _seed_default_garments(db)
         print("✓ Database seeding completed successfully!")

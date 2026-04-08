@@ -25,6 +25,12 @@ def ensure_indexes(db):
     db.comments.create_index([('outfit_id', ASCENDING), ('created_at', DESCENDING)])
     db.comments.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
 
+    # Legacy garments.id index caused duplicate key errors when id was missing or null.
+    try:
+        db.garments.drop_index('id_1')
+    except Exception:
+        pass
+
 
 def create_app():
     """Create and configure the Flask application."""
