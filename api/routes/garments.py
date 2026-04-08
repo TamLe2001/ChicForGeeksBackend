@@ -187,6 +187,7 @@ def create_garment():
             "user_id": user_id,
             "gender": payload.get("gender", "unisex"),
             "style": payload.get("style", "casual"),
+            "model_url": payload.get("model_url") or payload.get("reference"),
             "reference": payload.get("model_url") or payload.get("reference"),
             "display_name": payload.get("display_name"),
             "is_custom": True,  # Mark all garments created through this endpoint as custom
