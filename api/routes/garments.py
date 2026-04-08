@@ -119,50 +119,53 @@ def create_garment():
     user_id = str(g.current_user.get("_id"))
 
     try:
-        # Create appropriate garment type
+        # Extract common fields
+        common_kwargs = {
+            "name": payload.get("name", f"Untitled {garment_type.capitalize()}"),
+            "user_id": user_id,
+            "gender": payload.get("gender", "unisex"),
+            "style": payload.get("style", "casual"),
+            "reference": payload.get("model_url") or payload.get("reference"),
+            "display_name": payload.get("display_name"),
+            "is_custom": True,  # Mark all garments created through this endpoint as custom
+        }
+        
+        # Add optional common fields if present
+        if payload.get("display_name"):
+            common_kwargs["display_name"] = payload.get("display_name")
+        if payload.get("thumbnail_url"):
+            common_kwargs["thumbnail_url"] = payload.get("thumbnail_url")
+        if payload.get("is_custom") is not None:
+            common_kwargs["is_custom"] = payload.get("is_custom")
+        if payload.get("default") is not None:
+            common_kwargs["default"] = payload.get("default")
+        if payload.get("created_at"):
+            common_kwargs["created_at"] = payload.get("created_at")
+
+        # Create appropriate garment type with type-specific fields
         if garment_type == "shirt":
             garment = Shirt(
-                name=payload.get("name", "Untitled Shirt"),
-                user_id=user_id,
-                gender=payload.get("gender", "unisex"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
+                **common_kwargs,
                 sleeve_type=payload.get("sleeve_type", "short"),
-                color=payload.get("color"),
                 pattern=payload.get("pattern", "solid"),
             )
         elif garment_type == "pants":
             garment = Pants(
-                name=payload.get("name", "Untitled Pants"),
-                user_id=user_id,
-                gender=payload.get("gender", "unisex"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
+                **common_kwargs,
                 fit=payload.get("fit", "regular"),
                 length=payload.get("length", "full"),
-                color=payload.get("color"),
                 material=payload.get("material", "cotton"),
             )
         elif garment_type == "skirt":
             garment = Skirt(
-                name=payload.get("name", "Untitled Skirt"),
-                user_id=user_id,
-                gender=payload.get("gender", "female"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
+                **common_kwargs,
                 length=payload.get("length", "knee"),
-                color=payload.get("color"),
                 material=payload.get("material", "cotton"),
             )
-        elif garment_type == "accessories":
+        elif garment_type == "accessory" or garment_type == "accessories":
             garment = Accessory(
-                name=payload.get("name", "Untitled Accessory"),
-                user_id=user_id,
-                gender=payload.get("gender", "unisex"),
-                style=payload.get("style", "casual"),
-                reference=payload.get("reference"),
+                **common_kwargs,
                 accessory_type=payload.get("accessory_type", "generic"),
-                color=payload.get("color"),
                 material=payload.get("material", "mixed"),
             )
         else:
