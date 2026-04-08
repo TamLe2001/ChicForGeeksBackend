@@ -104,6 +104,67 @@ def get_default_glb(file_name):
         return jsonify({'error': f'Download failed: {str(e)}'}), 502
     except Exception as e:
         return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
+
+
+@garments_bp.get("/garments/custom-glb/<garment_id>")
+@token_required
+def download_custom_garment(garment_id):
+    """Stream a custom garment GLB through the backend to avoid browser CORS issues."""
+    user_id = str(g.current_user.get("_id"))
+
+    try:
+        service = _get_garment_service()
+        garment = service.get_garment(garment_id)
+
+        if not garment:
+            return jsonify({"error": "garment not found"}), 404
+
+        if garment.user_id != user_id:
+            return jsonify({"error": "not authorized to view this garment"}), 403
+
+        source_url = garment.reference
+        if not source_url:
+            return jsonify({"error": "garment model URL not available"}), 404
+
+        response = requests.get(
+            source_url,
+            stream=True,
+            timeout=(5, 60),
+        )
+
+        if response.status_code == 404:
+            response.close()
+            return jsonify({'error': 'File not found in cloud storage'}), 404
+
+        if response.status_code != 200:
+            response.close()
+            return jsonify({'error': f'Failed to download file from cloud: {response.status_code}'}), 502
+
+        content_type = response.headers.get('Content-Type', 'application/octet-stream')
+        content_length = response.headers.get('Content-Length')
+
+        def generate():
+            try:
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+
+        headers = {
+            'Content-Type': content_type,
+            'Cache-Control': 'public, max-age=86400',
+        }
+        if content_length:
+            headers['Content-Length'] = content_length
+
+        return Response(stream_with_context(generate()), headers=headers, status=200)
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Download timeout - file may be too large or network issues'}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
+    except Exception as e:
+        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
      
      
 @garments_bp.post("/garments")

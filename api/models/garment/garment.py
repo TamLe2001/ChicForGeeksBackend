@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
+from flask import url_for
 from .enums import Gender, Style
 
 class Garment(ABC):
@@ -49,6 +50,17 @@ class Garment(ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert garment to dictionary for database storage."""
+        model_url = self.reference
+        if self.is_custom and self.id:
+            try:
+                model_url = url_for(
+                    "garments.download_custom_garment",
+                    garment_id=self.id,
+                    _external=True,
+                )
+            except RuntimeError:
+                model_url = self.reference
+
         return {
             "id": self.id or (str(self._id) if self._id else None),
             "type": self.get_type(),
@@ -57,6 +69,7 @@ class Garment(ABC):
             "gender": self.gender.value,
             "style": self.style.value,
             "reference": self.reference,
+            "model_url": model_url,
             "created_at": self.created_at,
             "is_custom": self.is_custom,
             "display_name": self.display_name,
