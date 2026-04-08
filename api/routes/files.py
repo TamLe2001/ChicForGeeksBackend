@@ -1,4 +1,4 @@
-from flask import Blueprint, Response, jsonify, request, current_app, send_file, send_from_directory, stream_with_context
+from flask import Blueprint, Response, jsonify, request, current_app, send_file, send_from_directory, stream_with_context, url_for
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
@@ -98,12 +98,14 @@ def _upload_model_to_cloud(allowed_extensions, file_type_label):
             "file_type": file_type_label
         }
         result = current_app.db.files.insert_one(file_doc)
+        file_id = str(result.inserted_id)
         return {
             "status": "success",
             "message": f"{file_type_label.capitalize()} file uploaded successfully",
-            "file_id": str(result.inserted_id),
+            "file_id": file_id,
             "filename": file.filename,
-            "cloud_url": upload_url,
+            "file_url": url_for('files.get_file_content', file_id=file_id, _external=True),
+            "download_url": url_for('files.download_file', file_id=file_id, _external=True),
             "file_type": file_type_label
         }, 201
     except requests.exceptions.Timeout:
@@ -168,12 +170,14 @@ def _upload_image_to_cloud(allowed_extensions, file_type_label):
             "file_type": file_type_label
         }
         result = current_app.db.files.insert_one(file_doc)
+        file_id = str(result.inserted_id)
         return {
             "status": "success",
             "message": f"{file_type_label.capitalize()} file uploaded successfully",
-            "file_id": str(result.inserted_id),
+            "file_id": file_id,
             "filename": file.filename,
-            "cloud_url": upload_url,
+            "file_url": url_for('files.get_file_content', file_id=file_id, _external=True),
+            "download_url": url_for('files.download_file', file_id=file_id, _external=True),
             "file_type": file_type_label
         }, 201
     except requests.exceptions.Timeout:
@@ -308,6 +312,60 @@ def download_file(file_id):
         )
     except Exception as e:
         return {"error": f"Failed to download file: {str(e)}"}, 500
+
+
+@files_bp.route('/files/<file_id>/content', methods=['GET'])
+def get_file_content(file_id):
+    """Stream file content from NextCloud for frontend consumption."""
+    try:
+        from bson.objectid import ObjectId
+
+        file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
+        if not file_doc:
+            return {"error": "File not found"}, 404
+
+        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
+        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
+
+        response = requests.get(
+            file_doc['url'],
+            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            stream=True,
+            timeout=(5, 60)
+        )
+
+        if response.status_code == 404:
+            response.close()
+            return {"error": "File not found in cloud storage"}, 404
+        if response.status_code != 200:
+            response.close()
+            return {"error": f"Failed to stream file: {response.status_code}"}, 502
+
+        content_type = response.headers.get('Content-Type') or file_doc.get('content_type') or 'application/octet-stream'
+        content_length = response.headers.get('Content-Length')
+
+        def generate():
+            try:
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                response.close()
+
+        headers = {
+            'Content-Type': content_type,
+            'Cache-Control': 'public, max-age=86400',
+        }
+        if content_length:
+            headers['Content-Length'] = content_length
+
+        return Response(stream_with_context(generate()), headers=headers, status=200)
+    except requests.exceptions.Timeout:
+        return {"error": "Download timeout - file may be too large or network issues"}, 504
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Download failed: {str(e)}"}, 502
+    except Exception as e:
+        return {"error": f"Failed to stream file: {str(e)}"}, 500
 
 
 @files_bp.route('/uploads/<path:filepath>')
