@@ -234,6 +234,7 @@ def create_garment():
 
         service = _get_garment_service()
         garment_id = service.create_garment(garment)
+        garment.id = garment_id
 
         return (
             jsonify(

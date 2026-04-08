@@ -18,7 +18,9 @@ class Shirt(Garment):
             reference=data.get("reference"),
             style=data.get("style"),
             created_at=data.get("created_at"),
-            id=data.get("id"),
+            id=data.get("id") or data.get("_id"),
+            display_name=data.get("display_name"),
+            is_custom=data.get("is_custom", False),
         )
         shirt._id = data.get("_id")
         return shirt
