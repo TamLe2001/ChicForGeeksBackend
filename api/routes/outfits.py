@@ -129,7 +129,7 @@ def create_outfit():
 	if not payload.get('name'):
 		return jsonify({'error': 'name is required'}), 400
 
-	user_id = str(g.current_user.get('_id'))
+	user_id = g.current_user.get('_id')
 	payload['user_id'] = user_id
 
 	try:
