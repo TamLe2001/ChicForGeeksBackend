@@ -72,7 +72,7 @@ def get_published_outfits():
 					'_id': 1,
 					'name': 1,
 					'gender': 1,
-					'bio': 1,
+					'description': {'$ifNull': ['$description', '$bio']},
 					'shirt': 1,
 					'pants': 1,
 					'skirt': 1,
@@ -140,7 +140,7 @@ def create_outfit():
 			'name': outfit.name,
 			'user_id': outfit.user_id,
 			'gender': outfit.gender,
-			'bio': outfit.bio,
+			'description': outfit.description,
 			'shirt': outfit.shirt,
 			'pants': outfit.pants,
 			'skirt': outfit.skirt,
@@ -211,10 +211,15 @@ def update_outfit(outfit_id):
 		return jsonify({'error': 'invalid outfit id'}), 400
 
 	payload = request.get_json(silent=True) or {}
+	if 'description' not in payload and 'bio' in payload:
+		payload['description'] = payload.get('bio')
+	if 'bio' in payload:
+		payload.pop('bio')
+
 	allowed_fields = {
 		'name',
 		'style',
-		'bio',
+		'description',
 		'shirt',
 		'pants',
 		'published',

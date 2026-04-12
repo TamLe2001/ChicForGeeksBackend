@@ -12,7 +12,7 @@ class Outfit:
 		name: str,
 		user_id: str,
 		gender: Gender,
-		bio: Optional[str] = None,
+		description: Optional[str] = None,
 		shirt: Optional[str] = None,
 		pants: Optional[str] = None,
 		skirt: Optional[str] = None,
@@ -27,7 +27,7 @@ class Outfit:
 			name: Outfit name
 			user_id: User ID who created this outfit
 			gender: Gender of the outfit
-			bio: Outfit description/bio
+			description: Outfit description
 			shirt: Shirt garment id
 			pants: Pants garment id
 			skirt: Skirt garment id
@@ -38,7 +38,7 @@ class Outfit:
 		self.name = name
 		self.user_id = user_id
 		self.gender = gender
-		self.bio = bio
+		self.description = description
 		self.shirt = shirt
 		self.pants = pants
 		self.skirt = skirt
@@ -57,7 +57,7 @@ class Outfit:
 			name=payload.get('name'),
 			user_id=payload.get('user_id'),
 			gender=Gender(payload.get('gender')) if payload.get('gender') else None,
-			bio=payload.get('bio'),
+			description=payload.get('description', payload.get('bio')),
 			shirt=payload.get('shirt'),  
 			pants=payload.get('pants'),
 			skirt=payload.get('skirt'),
@@ -76,7 +76,7 @@ class Outfit:
 			name=outfit_doc.get('name'),
 			user_id=outfit_doc.get('user_id'),
 			gender=Gender(outfit_doc.get('gender')) if outfit_doc.get('gender') else None,
-			bio=outfit_doc.get('bio'),
+			description=outfit_doc.get('description', outfit_doc.get('bio')),
 			shirt=outfit_doc.get('shirt'),
 			pants=outfit_doc.get('pants'),
 			skirt=outfit_doc.get('skirt'),
@@ -93,7 +93,7 @@ class Outfit:
 			'id': str(self._id) if self._id else None,
 			'name': self.name,
 			'user_id': self.user_id,
-			'bio': self.bio,
+			'description': self.description,
 			'gender': self.gender.value if self.gender else None,
 			'shirt': self.shirt,
 			'pants': self.pants,

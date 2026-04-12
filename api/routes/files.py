@@ -137,7 +137,7 @@ def _upload_image_to_cloud(allowed_extensions, file_type_label):
         nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
         if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
             return {"error": "NextCloud not configured"}, 500
-        base_path = f"{nextcloud_url}{user_id}/"
+        base_path = f"{nextcloud_url}images/{user_id}/"
         create_folder_response = requests.request(
             "MKCOL",
             base_path,
@@ -198,6 +198,54 @@ def upload_to_cloud():
 def upload_model_to_cloud():
     """Upload GLB/GLTF files to NextCloud storage with folder organization (category required)"""
     return _upload_model_to_cloud({'glb', 'gltf'}, 'model')
+
+
+@files_bp.route('/upload/profile', methods=['POST'])
+def upload_profile_picture_to_cloud():
+    """Upload profile image to cloud and return profile picture URL."""
+    try:
+        payload = request.get_json(silent=True) if request.is_json else request.form.to_dict()
+        payload = payload or {}
+
+        user_id = payload.get('user_id') or request.args.get('user_id') or request.form.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id is required'}), 400
+
+        profile_file = request.files.get('profile_picture') or request.files.get('file')
+        if not profile_file or not profile_file.filename:
+            return jsonify({'error': 'profile_picture file is required'}), 400
+
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        upload_result, upload_code = cloud.upload_image_profile(profile_file, str(user_id))
+        if upload_code != 201:
+            return jsonify(upload_result), upload_code
+
+        profile_picture = upload_result.get('cloud_url')
+        if not profile_picture:
+            return jsonify({'error': 'upload succeeded but no profile URL returned'}), 500
+
+        from bson.objectid import ObjectId
+        try:
+            current_app.db.users.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': {'profile_picture': profile_picture}},
+            )
+        except Exception:
+            # If user_id is not a valid ObjectId, skip profile update and still return upload URL.
+            pass
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Profile picture uploaded successfully',
+            'profile_picture': profile_picture,
+            'file_id': upload_result.get('file_id'),
+            'filename': upload_result.get('filename'),
+        }), 201
+    except Exception as e:
+        return jsonify({'error': f'Failed to upload profile picture: {str(e)}'}), 500
 
 
 @files_bp.route('/upload/images', methods=['POST'])
