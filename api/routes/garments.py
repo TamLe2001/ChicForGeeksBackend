@@ -200,7 +200,6 @@ def create_garment():
             "name": payload.get("name", f"Untitled {garment_type.capitalize()}"),
             "user_id": user_id,
             "gender": payload.get("gender", "unisex"),
-            "style": payload.get("style", "casual"),
             "display_name": payload.get("display_name"),
             "is_custom": True,  # Mark all garments created through this endpoint as custom
             "id": uuid4().hex,

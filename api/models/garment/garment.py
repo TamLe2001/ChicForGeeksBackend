@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
-from .enums import Gender, Style
+from .enums import Gender
 
 class Garment(ABC):
     """Abstract base class for all garment types."""
@@ -13,7 +13,6 @@ class Garment(ABC):
         name: str,
         user_id: str,
         gender: Gender,
-        style: Style,
         display_name: Optional[str] = None,
         created_at: Optional[datetime] = None,
         is_custom: bool = False,
@@ -27,7 +26,6 @@ class Garment(ABC):
             name: Name of the garment
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
-            style: Genre or category (Style enum)
             display_name: Name to display for the garment (defaults to name if not provided)
             created_at: Creation timestamp
             is_custom: Flag indicating if the garment is custom
@@ -37,7 +35,6 @@ class Garment(ABC):
         self.name = name
         self.user_id = user_id
         self.gender = gender if isinstance(gender, Gender) else Gender(str(gender).lower())
-        self.style = style if isinstance(style, Style) else Style(str(style).lower())
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
         self.display_name = display_name or name  # Fallback to name if not provided
@@ -52,7 +49,6 @@ class Garment(ABC):
             "name": self.name,
             "user_id": self.user_id,
             "gender": self.gender.value,
-            "style": self.style.value,
             "created_at": self.created_at,
             "is_custom": self.is_custom,
             "display_name": self.display_name,

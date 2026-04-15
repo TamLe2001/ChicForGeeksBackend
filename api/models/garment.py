@@ -3,7 +3,6 @@
 from api.models.garment import (
 	Garment,
 	Gender,
-	Style,
 	Shirt,
 	Pants,
 	Skirt,
@@ -13,7 +12,6 @@ from api.models.garment import (
 __all__ = [
 	"Garment",
 	"Gender",
-	"Style",
 	"Shirt",
 	"Pants",
 	"Skirt",

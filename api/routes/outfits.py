@@ -218,7 +218,6 @@ def update_outfit(outfit_id):
 
 	allowed_fields = {
 		'name',
-		'style',
 		'description',
 		'shirt',
 		'pants',
