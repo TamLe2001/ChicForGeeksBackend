@@ -195,17 +195,9 @@ class CloudService:
             return err, code
         return self._upload_to_folder(payload, jpg_filename, "images", ImageType.CUSTOM.value)
         
-    def upload_fbx(self, file, filename):
-        """Upload FBX file to NextCloud and save metadata in database."""
-        return self._upload_to_folder(file, filename, "fbx", "fbx")
-        
-    def upload_garment(self, file, filename):
-        """Upload garment file to NextCloud and save metadata in database."""
-        return self._upload_to_folder(file, filename, "garments", "garment")
-        
-    def upload_outfit(self, file, filename):
-        """Upload outfit file to NextCloud and save metadata in database."""
-        return self._upload_to_folder(file, filename, "outfits", "outfit")
+    def upload_glb(self, file, filename):
+        """Upload GLB file to NextCloud and save metadata in database."""
+        return self._upload_to_folder(file, filename, "customs", "glb")
         
     def get_url_image_profile(self, user_id):
         """Get public URL for an image stored in NextCloud."""
@@ -220,13 +212,6 @@ class CloudService:
         if not ok:
             return err, code
         return f"{self.nextcloud_url}{user_id}/{filename}"
-
-    def get_url_fbx(self, filename):
-        """Get public URL for an FBX file stored in NextCloud."""
-        ok, err, code = self._nextcloud_configured()
-        if not ok:
-            return err, code
-        return f"{self.nextcloud_url}fbx/{filename}"
     
     def get_url_garment_default(self, garment_name):
         """Get public URL for a garment file stored in NextCloud."""

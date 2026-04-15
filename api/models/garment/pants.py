@@ -16,8 +16,6 @@ class Pants(Garment):
             user_id=data.get("user_id"),
             gender=data.get("gender"),
             style=data.get("style"),
-            model_url=data.get("model_url"),
-            reference=data.get("reference"),
             created_at=data.get("created_at"),
             id=data.get("id") or data.get("_id"),
             display_name=data.get("display_name"),

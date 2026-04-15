@@ -14,9 +14,7 @@ class Garment(ABC):
         user_id: str,
         gender: Gender,
         style: Style,
-        model_url: Optional[str] = None,
         display_name: Optional[str] = None,
-        reference: Optional[str] = None,
         created_at: Optional[datetime] = None,
         is_custom: bool = False,
         id: Optional[str] = None,
@@ -30,9 +28,7 @@ class Garment(ABC):
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
             style: Genre or category (Style enum)
-            model_url: URL or path to the garment model
             display_name: Name to display for the garment (defaults to name if not provided)
-            reference: Reference URL or path to the garment model
             created_at: Creation timestamp
             is_custom: Flag indicating if the garment is custom
             id: Optional custom ID field from database
@@ -42,8 +38,6 @@ class Garment(ABC):
         self.user_id = user_id
         self.gender = gender if isinstance(gender, Gender) else Gender(str(gender).lower())
         self.style = style if isinstance(style, Style) else Style(str(style).lower())
-        self.model_url = model_url
-        self.reference = reference
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
         self.display_name = display_name or name  # Fallback to name if not provided
@@ -59,8 +53,6 @@ class Garment(ABC):
             "user_id": self.user_id,
             "gender": self.gender.value,
             "style": self.style.value,
-            "reference": self.reference,
-            "model_url": self.model_url,
             "created_at": self.created_at,
             "is_custom": self.is_custom,
             "display_name": self.display_name,

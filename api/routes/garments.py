@@ -1,12 +1,13 @@
 """Routes for garment management."""
 
-from api.models.garment.accessory import Accessory
 from flask import Blueprint, Response, current_app, g, jsonify, request, stream_with_context
 from api.models.garment import Shirt, Pants, Skirt, Accessory
 from api.services.garment_service import GarmentService
 from api.routes.auth import token_required
 from werkzeug.utils import secure_filename
 import requests
+from requests.auth import HTTPBasicAuth
+from io import BytesIO
 from uuid import uuid4
 
 garments_bp = Blueprint("garments", __name__)
@@ -123,12 +124,33 @@ def download_custom_garment(garment_id):
         if garment.user_id != user_id:
             return jsonify({"error": "not authorized to view this garment"}), 403
 
-        source_url = garment.reference
+        cloud = getattr(current_app, "cloud_service", None)
+        if not cloud:
+            return jsonify({"error": "cloud service not available"}), 500
+
+        file_doc = current_app.db.files.find_one(
+            {
+                "filename": garment.id,
+                "file_type": "glb",
+            },
+            sort=[("uploaded_at", -1)],
+        )
+        if not file_doc:
+            return jsonify({"error": "garment model not found"}), 404
+
+        source_url = file_doc.get("url")
         if not source_url:
             return jsonify({"error": "garment model URL not available"}), 404
 
+        auth = (
+            HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass)
+            if cloud.nextcloud_user and cloud.nextcloud_pass
+            else None
+        )
+
         response = requests.get(
             source_url,
+            auth=auth,
             stream=True,
             timeout=(5, 60),
         )
@@ -181,14 +203,16 @@ def create_garment():
     user_id = str(g.current_user.get("_id"))
 
     try:
+        model_source_url = payload.get("source_url")
+        if not model_source_url:
+            return jsonify({"error": "source_url is required"}), 400
+
         # Extract common fields
         common_kwargs = {
             "name": payload.get("name", f"Untitled {garment_type.capitalize()}"),
             "user_id": user_id,
             "gender": payload.get("gender", "unisex"),
             "style": payload.get("style", "casual"),
-            "model_url": payload.get("model_url") or payload.get("reference"),
-            "reference": payload.get("model_url") or payload.get("reference"),
             "display_name": payload.get("display_name"),
             "is_custom": True,  # Mark all garments created through this endpoint as custom
             "id": uuid4().hex,
@@ -222,6 +246,29 @@ def create_garment():
         garment_id = service.create_garment(garment)
         garment.id = garment_id
         service.update_garment(garment_id, {"id": garment_id})
+
+        cloud = getattr(current_app, "cloud_service", None)
+        if not cloud:
+            return jsonify({"error": "cloud service not available"}), 500
+
+        try:
+            source_response = requests.get(model_source_url, stream=True, timeout=(5, 120))
+            if source_response.status_code != 200:
+                return jsonify({"error": f"failed to fetch source model: {source_response.status_code}"}), 502
+
+            model_bytes = source_response.content
+            payload = {
+                "stream": BytesIO(model_bytes),
+                "content_type": source_response.headers.get("Content-Type", "application/octet-stream"),
+                "content_length": len(model_bytes),
+            }
+            upload_result, upload_code = cloud.upload_glb(payload, garment.id)
+            if upload_code != 201:
+                service.delete_garment(garment_id)
+                return jsonify(upload_result), upload_code
+        finally:
+            if 'source_response' in locals():
+                source_response.close()
 
         return (
             jsonify(
@@ -303,7 +350,6 @@ def update_garment(garment_id):
         # Allowed fields to update based on garment type
         allowed_fields = {
             "name",
-            "reference",
             "color",
             "pattern",
             "fit",
