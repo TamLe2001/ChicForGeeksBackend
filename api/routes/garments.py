@@ -128,19 +128,7 @@ def download_custom_garment(garment_id):
         if not cloud:
             return jsonify({"error": "cloud service not available"}), 500
 
-        file_doc = current_app.db.files.find_one(
-            {
-                "filename": garment.id,
-                "file_type": "glb",
-            },
-            sort=[("uploaded_at", -1)],
-        )
-        if not file_doc:
-            return jsonify({"error": "garment model not found"}), 404
-
-        source_url = file_doc.get("url")
-        if not source_url:
-            return jsonify({"error": "garment model URL not available"}), 404
+        source_url = f"{cloud.nextcloud_url}customs/{secure_filename(garment.id)}"
 
         auth = (
             HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass)
