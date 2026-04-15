@@ -14,6 +14,7 @@ class Garment(ABC):
         user_id: str,
         gender: Gender,
         display_name: Optional[str] = None,
+        thumbnail_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         is_custom: bool = False,
         id: Optional[str] = None,
@@ -27,6 +28,7 @@ class Garment(ABC):
             user_id: User ID who created this garment
             gender: Target gender (Gender enum)
             display_name: Name to display for the garment (defaults to name if not provided)
+            thumbnail_url: Optional thumbnail URL for UI previews
             created_at: Creation timestamp
             is_custom: Flag indicating if the garment is custom
             id: Optional custom ID field from database
@@ -38,6 +40,7 @@ class Garment(ABC):
         self.created_at = created_at or datetime.now(timezone.utc)
         self.is_custom = is_custom
         self.display_name = display_name or name  # Fallback to name if not provided
+        self.thumbnail_url = thumbnail_url
         self.id = id  # Custom id field from database
         self._id = None  # MongoDB _id field
 
@@ -52,6 +55,7 @@ class Garment(ABC):
             "created_at": self.created_at,
             "is_custom": self.is_custom,
             "display_name": self.display_name,
+            "thumbnail_url": self.thumbnail_url,
         }
 
     @abstractmethod
