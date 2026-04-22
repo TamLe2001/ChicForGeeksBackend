@@ -1,7 +1,9 @@
 import os
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
+from bson import ObjectId
 import mongomock
 import run as app_run
 
@@ -106,6 +108,57 @@ class TestOutfitInteractions(unittest.TestCase):
         comments_body = comments_response.get_json()
         self.assertEqual(comments_body["count"], 1)
         self.assertEqual(comments_body["comments"][0]["content"], "Great look")
+
+    def test_get_published_outfits_returns_only_published(self):
+        published_id = ObjectId()
+
+        self.app.db.outfits.insert_many(
+            [
+                {
+                    "_id": published_id,
+                    "name": "Published Outfit",
+                    "user_id": "user-1",
+                    "gender": "female",
+                    "description": "Visible",
+                    "shirt": None,
+                    "pants": None,
+                    "skirt": None,
+                    "accessory": None,
+                    "published": True,
+                    "created_at": datetime.now(timezone.utc),
+                },
+                {
+                    "_id": ObjectId(),
+                    "name": "Draft Outfit",
+                    "user_id": "user-2",
+                    "gender": "male",
+                    "description": "Hidden",
+                    "shirt": None,
+                    "pants": None,
+                    "skirt": None,
+                    "accessory": None,
+                    "published": False,
+                    "created_at": datetime.now(timezone.utc),
+                },
+            ]
+        )
+
+        response = self.client.get("/api/outfits/published")
+        self.assertEqual(response.status_code, 200)
+
+        body = response.get_json()
+        self.assertEqual(len(body), 1)
+        self.assertEqual(body[0]["id"], str(published_id))
+        self.assertEqual(body[0]["name"], "Published Outfit")
+
+    def test_get_outfit_comments_returns_404_when_outfit_missing(self):
+        missing_outfit_id = str(ObjectId())
+
+        response = self.client.get(f"/api/outfits/{missing_outfit_id}/comments")
+        self.assertEqual(response.status_code, 404)
+
+        body = response.get_json()
+        self.assertEqual(body["error"], "outfit not found")
 
 
 if __name__ == "__main__":
