@@ -1,225 +1,73 @@
-from flask import Blueprint, Response, jsonify, request, current_app, send_file, send_from_directory, stream_with_context, url_for
+from flask import Blueprint, Response, jsonify, request, current_app, send_file, stream_with_context, g
 import requests
 from requests.auth import HTTPBasicAuth
-from datetime import datetime
 from io import BytesIO
 import os
 from werkzeug.utils import secure_filename
+from bson.objectid import ObjectId
+
+from api.routes.auth import token_required
 
 
 files_bp = Blueprint('files', __name__)
 
 
-def allowed_file(filename):
-    """Check if file extension is allowed"""
-    allowed_ext = current_app.config.get('ALLOWED_EXTENSIONS', {'glb', 'gltf', 'png', 'jpg', 'jpeg'})
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_ext
-
-
-def allowed_file_by_extensions(filename, allowed_extensions):
-    """Check if filename extension is in a specific allowed set"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
-
-
-
-# Model upload: requires category
-def _upload_model_to_cloud(allowed_extensions, file_type_label):
-    try:
-        if 'file' not in request.files:
-            return {"error": "No file provided"}, 400
-
-        file = request.files['file']
-        if file.filename == '':
-            return {"error": "No file selected"}, 400
-        if not allowed_file_by_extensions(file.filename, allowed_extensions):
-            allowed_text = ', '.join(sorted(allowed_extensions))
-            return {"error": f"Only {file_type_label} files allowed ({allowed_text})"}, 400
-
-        user_id = request.form.get('user_id') or request.args.get('user_id')
-        category = request.form.get('category') or request.args.get('category')
-        if not user_id:
-            return {"error": "user_id is required"}, 400
-        if not category:
-            return {"error": "category is required (shirt, pants, skirt, accessory)"}, 400
-        valid_categories = {'shirt', 'pants', 'skirt', 'accessory'}
-        if category.lower() not in valid_categories:
-            return {"error": f"Invalid category. Must be one of: {', '.join(valid_categories)}"}, 400
-
-        max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
-        if file.content_length and file.content_length > max_size:
-            return {"error": "File too large (max 100MB)"}, 413
-
-        nextcloud_url = current_app.config.get('NEXTCLOUD_URL')
-        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
-        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
-        if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
-            return {"error": "NextCloud not configured"}, 500
-
-        base_path = f"{nextcloud_url}{user_id}/"
-        category_path = f"{base_path}{category}/"
-        create_folder_response = requests.request(
-            "MKCOL",
-            base_path,
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            timeout=10
-        )
-        if create_folder_response.status_code not in [201, 405]:
-            return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
-        create_category_response = requests.request(
-            "MKCOL",
-            category_path,
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            timeout=10
-        )
-        if create_category_response.status_code not in [201, 405]:
-            return {"error": f"Failed to create category folder: {create_category_response.status_code}"}, 500
-        upload_url = f"{category_path}{file.filename}"
-        headers = {"Content-Type": file.content_type or "application/octet-stream"}
-        response = requests.put(
-            upload_url,
-            data=file.stream,
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            headers=headers,
-            timeout=30
-        )
-        if response.status_code not in [201, 204]:
-            return {
-                "error": f"NextCloud error: {response.status_code}",
-                "details": response.text
-            }, 500
-        file_doc = {
-            "filename": file.filename,
-            "user_id": user_id,
-            "category": category.lower(),
-            "url": upload_url,
-            "size": file.content_length or 0,
-            "content_type": file.content_type or "application/octet-stream",
-            "uploaded_at": datetime.utcnow(),
-            "file_type": file_type_label
-        }
-        result = current_app.db.files.insert_one(file_doc)
-        file_id = str(result.inserted_id)
-        return {
-            "status": "success",
-            "message": f"{file_type_label.capitalize()} file uploaded successfully",
-            "file_id": file_id,
-            "filename": file.filename,
-            "file_url": url_for('files.get_file_content', file_id=file_id, _external=True),
-            "download_url": url_for('files.download_file', file_id=file_id, _external=True),
-            "file_type": file_type_label
-        }, 201
-    except requests.exceptions.Timeout:
-        return {"error": "Upload timeout - file may be too large"}, 504
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Upload failed: {str(e)}"}, 500
-    except Exception as e:
-        return {"error": f"Server error: {str(e)}"}, 500
-
-# Image upload: does NOT require category
-def _upload_image_to_cloud(allowed_extensions, file_type_label):
-    try:
-        if 'file' not in request.files:
-            return {"error": "No file provided"}, 400
-        file = request.files['file']
-        if file.filename == '':
-            return {"error": "No file selected"}, 400
-        if not allowed_file_by_extensions(file.filename, allowed_extensions):
-            allowed_text = ', '.join(sorted(allowed_extensions))
-            return {"error": f"Only {file_type_label} files allowed ({allowed_text})"}, 400
-        user_id = request.form.get('user_id') or request.args.get('user_id')
-        if not user_id:
-            return {"error": "user_id is required"}, 400
-        max_size = current_app.config.get('MAX_FILE_SIZE', 100 * 1024 * 1024)
-        if file.content_length and file.content_length > max_size:
-            return {"error": "File too large (max 100MB)"}, 413
-        nextcloud_url = current_app.config.get('NEXTCLOUD_URL')
-        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
-        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
-        if not all([nextcloud_url, nextcloud_user, nextcloud_pass]):
-            return {"error": "NextCloud not configured"}, 500
-        base_path = f"{nextcloud_url}images/{user_id}/"
-        create_folder_response = requests.request(
-            "MKCOL",
-            base_path,
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            timeout=10
-        )
-        if create_folder_response.status_code not in [201, 405]:
-            return {"error": f"Failed to create user folder: {create_folder_response.status_code}"}, 500
-        upload_url = f"{base_path}{file.filename}"
-        headers = {"Content-Type": file.content_type or "application/octet-stream"}
-        response = requests.put(
-            upload_url,
-            data=file.stream,
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            headers=headers,
-            timeout=30
-        )
-        if response.status_code not in [201, 204]:
-            return {
-                "error": f"NextCloud error: {response.status_code}",
-                "details": response.text
-            }, 500
-        file_doc = {
-            "filename": file.filename,
-            "user_id": user_id,
-            "url": upload_url,
-            "size": file.content_length or 0,
-            "content_type": file.content_type or "application/octet-stream",
-            "uploaded_at": datetime.utcnow(),
-            "file_type": file_type_label
-        }
-        result = current_app.db.files.insert_one(file_doc)
-        file_id = str(result.inserted_id)
-        return {
-            "status": "success",
-            "message": f"{file_type_label.capitalize()} file uploaded successfully",
-            "file_id": file_id,
-            "filename": file.filename,
-            "file_url": url_for('files.get_file_content', file_id=file_id, _external=True),
-            "download_url": url_for('files.download_file', file_id=file_id, _external=True),
-            "file_type": file_type_label
-        }, 201
-    except requests.exceptions.Timeout:
-        return {"error": "Upload timeout - file may be too large"}, 504
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Upload failed: {str(e)}"}, 500
-    except Exception as e:
-        return {"error": f"Server error: {str(e)}"}, 500
-
-
 @files_bp.route('/upload', methods=['POST'])
 def upload_to_cloud():
     """Legacy endpoint kept for compatibility. Prefer /upload/models and /upload/images."""
-    return {"error": "Endpoint deprecated. Use /upload/models for GLB/GLTF or /upload/images for images."}, 410
+    return jsonify({'error': 'Endpoint deprecated. Use /upload/models for GLB/GLTF or /upload/images for images.'}), 410
 
 
 @files_bp.route('/upload/models', methods=['POST'])
+@token_required
 def upload_model_to_cloud():
-    """Upload GLB/GLTF files to NextCloud storage with folder organization (category required)"""
-    return _upload_model_to_cloud({'glb', 'gltf'}, 'model')
-
-
-@files_bp.route('/upload/profile', methods=['POST'])
-def upload_profile_picture_to_cloud():
-    """Upload profile image to cloud and return profile picture URL."""
+    """Upload GLB/GLTF files to NextCloud storage with category organization.
+    
+    Required fields:
+    - file: GLB/GLTF file
+    - category: shirt, pants, skirt, or accessory
+    """
     try:
-        payload = request.get_json(silent=True) if request.is_json else request.form.to_dict()
-        payload = payload or {}
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
 
-        user_id = payload.get('user_id') or request.args.get('user_id') or request.form.get('user_id')
-        if not user_id:
-            return jsonify({'error': 'user_id is required'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
 
-        profile_file = request.files.get('profile_picture') or request.files.get('file')
-        if not profile_file or not profile_file.filename:
-            return jsonify({'error': 'profile_picture file is required'}), 400
+        category = request.form.get('category') or request.args.get('category')
+        if not category:
+            return jsonify({'error': 'category is required (shirt, pants, skirt, accessory)'}), 400
 
+        user_id = str(g.current_user.get('_id'))
+        
         cloud = getattr(current_app, 'cloud_service', None)
         if not cloud:
             return jsonify({'error': 'cloud service not available'}), 500
 
-        upload_result, upload_code = cloud.upload_image_profile(profile_file, str(user_id))
+        result, status_code = cloud.upload_model(file, file.filename, user_id, category)
+        return jsonify(result), status_code
+
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+@files_bp.route('/upload/profile', methods=['POST'])
+@token_required
+def upload_profile_picture_to_cloud():
+    """Upload profile image to cloud and return profile picture URL."""
+    try:
+        profile_file = request.files.get('profile_picture') or request.files.get('file')
+        if not profile_file or not profile_file.filename:
+            return jsonify({'error': 'profile_picture file is required'}), 400
+
+        user_id = str(g.current_user.get('_id'))
+        
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        upload_result, upload_code = cloud.upload_image_profile(profile_file, user_id)
         if upload_code != 201:
             return jsonify(upload_result), upload_code
 
@@ -227,14 +75,13 @@ def upload_profile_picture_to_cloud():
         if not profile_picture:
             return jsonify({'error': 'upload succeeded but no profile URL returned'}), 500
 
-        from bson.objectid import ObjectId
         try:
             current_app.db.users.update_one(
                 {'_id': ObjectId(user_id)},
                 {'$set': {'profile_picture': profile_picture}},
             )
         except Exception:
-            # If user_id is not a valid ObjectId, skip profile update and still return upload URL.
+            # If update fails, still return upload URL
             pass
 
         return jsonify({
@@ -244,19 +91,39 @@ def upload_profile_picture_to_cloud():
             'file_id': upload_result.get('file_id'),
             'filename': upload_result.get('filename'),
         }), 201
+
     except Exception as e:
         return jsonify({'error': f'Failed to upload profile picture: {str(e)}'}), 500
 
 
 @files_bp.route('/upload/images', methods=['POST'])
+@token_required
 def upload_image_to_cloud():
-    """Upload image files to NextCloud storage with folder organization (no category required)"""
-    return _upload_image_to_cloud({'png', 'jpg', 'jpeg'}, 'image')
+    """Upload image files to NextCloud storage (PNG/JPG/JPEG)."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        user_id = str(g.current_user.get('_id'))
+        
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        result, status_code = cloud.upload_image_custom(file, file.filename)
+        return jsonify(result), status_code
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to upload image: {str(e)}'}), 500
 
 
 @files_bp.route('/files', methods=['GET'])
 def list_files():
-    """List all uploaded files, optionally filtered by user_id"""
+    """List all uploaded files, optionally filtered by user_id and category."""
     try:
         user_id = request.args.get('user_id')
         category = request.args.get('category')
@@ -267,127 +134,140 @@ def list_files():
         if category:
             query['category'] = category.lower()
         
-        files = list(current_app.db.files.find(query, {'_id': 1, 'filename': 1, 'url': 1, 'size': 1, 'user_id': 1, 'category': 1, 'uploaded_at': 1}))
+        files = list(current_app.db.files.find(
+            query, 
+            {'_id': 1, 'filename': 1, 'url': 1, 'size': 1, 'user_id': 1, 'category': 1, 'uploaded_at': 1}
+        ))
         
         # Convert ObjectId to string for JSON serialization
         for f in files:
             f['_id'] = str(f['_id'])
         
-        return {"status": "success", "files": files}, 200
+        return jsonify({'status': 'success', 'files': files}), 200
+
     except Exception as e:
-        return {"error": f"Failed to fetch files: {str(e)}"}, 500
+        return jsonify({'error': f'Failed to fetch files: {str(e)}'}), 500
 
 
 @files_bp.route('/files/<file_id>', methods=['GET'])
 def get_file(file_id):
-    """Get file metadata by ID"""
+    """Get file metadata by ID."""
     try:
-        from bson.objectid import ObjectId
         file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
         
         if not file_doc:
-            return {"error": "File not found"}, 404
+            return jsonify({'error': 'File not found'}), 404
         
         file_doc['_id'] = str(file_doc['_id'])
-        return {"status": "success", "file": file_doc}, 200
+        return jsonify({'status': 'success', 'file': file_doc}), 200
+
     except Exception as e:
-        return {"error": f"Failed to fetch file: {str(e)}"}, 500
+        return jsonify({'error': f'Failed to fetch file: {str(e)}'}), 500
 
 
 @files_bp.route('/files/<file_id>', methods=['DELETE'])
+@token_required
 def delete_file(file_id):
-    """Delete file from NextCloud and database"""
+    """Delete file from NextCloud and database."""
     try:
-        from bson.objectid import ObjectId
-        
-        # Get file from database
-        file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
-        if not file_doc:
-            return {"error": "File not found"}, 404
-        
-        # Delete from NextCloud
-        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
-        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
-        
-        response = requests.delete(
-            file_doc['url'],
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
-            timeout=30
-        )
-        
-        if response.status_code not in [204, 200]:
-            return {"error": f"Failed to delete from NextCloud: {response.status_code}"}, 500
-        
-        # Delete from MongoDB
-        current_app.db.files.delete_one({'_id': ObjectId(file_id)})
-        
-        return {"status": "success", "message": "File deleted successfully"}, 200
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        result, status_code = cloud.delete_file(file_id)
+        return jsonify(result), status_code
+
     except Exception as e:
-        return {"error": f"Failed to delete file: {str(e)}"}, 500
+        return jsonify({'error': f'Failed to delete file: {str(e)}'}), 500
+
+
+@files_bp.route('/files', methods=['DELETE'])
+@token_required
+def delete_file_by_url():
+    """Delete file by URL payload."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        file_url = payload.get('url')
+        if not file_url:
+            return jsonify({'error': 'url is required'}), 400
+
+        file_doc = current_app.db.files.find_one({'url': file_url})
+        if not file_doc:
+            return jsonify({'error': 'File not found'}), 404
+
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        result, status_code = cloud.delete_file(str(file_doc['_id']))
+        return jsonify(result), status_code
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete file: {str(e)}'}), 500
 
 
 @files_bp.route('/download/<file_id>', methods=['GET'])
 def download_file(file_id):
-    """Download file from NextCloud storage"""
+    """Download file from NextCloud storage."""
     try:
-        from bson.objectid import ObjectId
-        
-        # Get file metadata from database
         file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
         if not file_doc:
-            return {"error": "File not found"}, 404
+            return jsonify({'error': 'File not found'}), 404
         
-        # Get NextCloud credentials
-        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
-        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
-        
-        # Download file from NextCloud
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
         response = requests.get(
             file_doc['url'],
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            auth=HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass),
             timeout=30
         )
         
         if response.status_code != 200:
-            return {"error": f"Failed to download file: {response.status_code}"}, 500
+            return jsonify({'error': f'Failed to download file: {response.status_code}'}), 500
         
-        # Return file as download
         return send_file(
             BytesIO(response.content),
             mimetype=file_doc.get('content_type', 'application/octet-stream'),
             as_attachment=True,
             download_name=file_doc['filename']
         )
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Download timeout - file may be too large'}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
     except Exception as e:
-        return {"error": f"Failed to download file: {str(e)}"}, 500
+        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
 
 
 @files_bp.route('/files/<file_id>/content', methods=['GET'])
 def get_file_content(file_id):
     """Stream file content from NextCloud for frontend consumption."""
     try:
-        from bson.objectid import ObjectId
-
         file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
         if not file_doc:
-            return {"error": "File not found"}, 404
+            return jsonify({'error': 'File not found'}), 404
 
-        nextcloud_user = current_app.config.get('NEXTCLOUD_USER')
-        nextcloud_pass = current_app.config.get('NEXTCLOUD_PASS')
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
 
         response = requests.get(
             file_doc['url'],
-            auth=HTTPBasicAuth(nextcloud_user, nextcloud_pass),
+            auth=HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass),
             stream=True,
             timeout=(5, 60)
         )
 
         if response.status_code == 404:
             response.close()
-            return {"error": "File not found in cloud storage"}, 404
+            return jsonify({'error': 'File not found in cloud storage'}), 404
+
         if response.status_code != 200:
             response.close()
-            return {"error": f"Failed to stream file: {response.status_code}"}, 502
+            return jsonify({'error': f'Failed to stream file: {response.status_code}'}), 502
 
         content_type = response.headers.get('Content-Type') or file_doc.get('content_type') or 'application/octet-stream'
         content_length = response.headers.get('Content-Length')
@@ -408,28 +288,21 @@ def get_file_content(file_id):
             headers['Content-Length'] = content_length
 
         return Response(stream_with_context(generate()), headers=headers, status=200)
+
     except requests.exceptions.Timeout:
-        return {"error": "Download timeout - file may be too large or network issues"}, 504
+        return jsonify({'error': 'Download timeout - file may be too large'}), 504
     except requests.exceptions.RequestException as e:
-        return {"error": f"Download failed: {str(e)}"}, 502
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
     except Exception as e:
-        return {"error": f"Failed to stream file: {str(e)}"}, 500
-
-
-@files_bp.route('/uploads/<path:filepath>')
-def serve_uploads(filepath):
-    """Serve uploaded files from the uploads directory."""
-    upload_dir = os.path.join(current_app.root_path, '..', 'uploads')
-    return send_from_directory(upload_dir, filepath)
+        return jsonify({'error': f'Failed to stream file: {str(e)}'}), 500
 
 
 @files_bp.post('/images')
 def get_custom_image():
-    """Download file directly from NextCloud custom folder"""
+    """Download file directly from NextCloud custom folder."""
     try:
-        cloud = current_app.cloud_service
-        
-        if not cloud.nextcloud_url:
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud or not cloud.nextcloud_url:
             return jsonify({'error': 'NextCloud not configured'}), 500
 
         safe_file_name = secure_filename(request.json.get('filename'))
@@ -473,9 +346,17 @@ def get_custom_image():
             headers['Content-Length'] = content_length
 
         return Response(stream_with_context(generate()), headers=headers, status=200)
+
     except requests.exceptions.Timeout:
-        return jsonify({'error': 'Download timeout - file may be too large or network issues'}), 504
+        return jsonify({'error': 'Download timeout - file may be too large'}), 504
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Download failed: {str(e)}'}), 502
     except Exception as e:
         return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
+
+
+@files_bp.route('/uploads/<path:filepath>')
+def serve_uploads(filepath):
+    """Serve uploaded files from the uploads directory."""
+    upload_dir = os.path.join(current_app.root_path, '..', 'uploads')
+    return send_file(os.path.join(upload_dir, filepath))

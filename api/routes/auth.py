@@ -168,3 +168,9 @@ def login():
 def me():
 	current_user = User.from_doc(g.current_user)
 	return jsonify(current_user.to_dict()), 200
+
+
+@auth_bp.post('/auth/logout')
+def logout():
+	"""JWT logout is handled client-side; keep endpoint for API compatibility."""
+	return jsonify({'status': 'success', 'message': 'logged out'}), 200

@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, current_app, jsonify, request, send_file
+from flask import Blueprint, current_app, g, jsonify, request, send_file
 from api.models.user import User
 from api.routes.auth import token_required
 from io import BytesIO
@@ -13,6 +13,27 @@ users_bp = Blueprint('users', __name__)
 @token_required
 def list_users():
 	users = current_app.db.users.find().sort('created_at', -1)
+	return jsonify([User.from_doc(u).to_dict() for u in users]), 200
+
+
+@users_bp.get('/users/me')
+@token_required
+def get_current_user():
+	"""Return the authenticated user profile."""
+	return jsonify(User.from_doc(g.current_user).to_dict()), 200
+
+
+@users_bp.get('/users/search')
+def search_users():
+	"""Search users by name with a small, safe result set."""
+	query = (request.args.get('q') or '').strip()
+	if not query:
+		return jsonify([]), 200
+
+	users = current_app.db.users.find(
+		{'name': {'$regex': query, '$options': 'i'}}
+	).sort('created_at', -1).limit(20)
+
 	return jsonify([User.from_doc(u).to_dict() for u in users]), 200
 
 

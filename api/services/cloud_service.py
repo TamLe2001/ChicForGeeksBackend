@@ -1,14 +1,22 @@
 from datetime import datetime
 from io import BytesIO
-from typing import Optional
+from typing import Optional, Tuple, Dict, Any
 
 import requests
 from PIL import Image
 from requests.auth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
+from bson.objectid import ObjectId
 
 from api.models.garment.garment import Garment
 from api.models.image import Image as ImageType
+
+
+DEFAULT_UPLOAD_TIMEOUT = 30
+DEFAULT_FOLDER_TIMEOUT = 10
+DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024
+VALID_GARMENT_CATEGORIES = {'shirt', 'pants', 'skirt', 'accessory'}
+
 
 class CloudService:
     """Service for managing file in cloud storage."""
@@ -26,15 +34,40 @@ class CloudService:
         self.nextcloud_url = self._normalize_base_url(config.get('NEXTCLOUD_URL'))
         self.nextcloud_user = config.get('NEXTCLOUD_USER')
         self.nextcloud_pass = config.get('NEXTCLOUD_PASS')
-
+        self.max_file_size = config.get('MAX_FILE_SIZE', DEFAULT_MAX_FILE_SIZE)
 
     @staticmethod
     def _normalize_base_url(url: Optional[str]) -> Optional[str]:
         """Ensure base URL ends with a slash for safe joining."""
         if not url:
             return None
-			
+
         return url if url.endswith('/') else f"{url}/"
+
+    @staticmethod
+    def _get_file_stream(file):
+        """Normalize supported file payloads to a stream-like object."""
+        if isinstance(file, dict):
+            return file.get("stream")
+        return getattr(file, "stream", file)
+
+    @staticmethod
+    def _get_content_type(file):
+        """Normalize supported file payloads to a content type string."""
+        if isinstance(file, dict):
+            return file.get("content_type") or "application/octet-stream"
+        return getattr(file, "content_type", None) or "application/octet-stream"
+
+    @staticmethod
+    def _get_content_length(file):
+        """Normalize supported file payloads to a content length integer."""
+        if isinstance(file, dict):
+            return file.get("content_length") or 0
+        return getattr(file, "content_length", None) or 0
+
+    def _build_upload_url(self, folder: str, filename: str) -> str:
+        """Build a safe NextCloud upload URL for a folder and filename."""
+        return f"{self.nextcloud_url}{folder.strip('/')}/{secure_filename(filename or '')}"
     
     def _nextcloud_configured(self) -> tuple[bool, Optional[dict], Optional[int]]:
         """Check if NextCloud is properly configured.
@@ -65,7 +98,7 @@ class CloudService:
                 "MKCOL",
                 folder_url,
                 auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
-                timeout=10,
+                timeout=DEFAULT_FOLDER_TIMEOUT,
             )
 
             if response.status_code not in (201, 405):
@@ -91,17 +124,10 @@ class CloudService:
         if not ok:
             return err, code
 
-        upload_url = f"{self.nextcloud_url}{folder.strip('/')}/{safe_filename}"
-
-        # Support both Werkzeug FileStorage objects and normalized dict payloads.
-        if isinstance(file, dict):
-            content_type = file.get("content_type") or "application/octet-stream"
-            stream = file.get("stream")
-            content_length = file.get("content_length") or 0
-        else:
-            content_type = getattr(file, "content_type", None) or "application/octet-stream"
-            stream = getattr(file, "stream", file)
-            content_length = getattr(file, "content_length", None) or 0
+        upload_url = self._build_upload_url(folder, safe_filename)
+        content_type = self._get_content_type(file)
+        stream = self._get_file_stream(file)
+        content_length = self._get_content_length(file)
 
         if stream is None:
             return {"error": "Invalid file payload"}, 400
@@ -114,7 +140,7 @@ class CloudService:
             data=stream,
             auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
             headers={"Content-Type": content_type},
-            timeout=30,
+            timeout=DEFAULT_UPLOAD_TIMEOUT,
         )
 
         if response.status_code not in (201, 204):
@@ -148,7 +174,7 @@ class CloudService:
         safe_base = secure_filename((filename or "image").rsplit(".", 1)[0]) or "image"
         output_filename = f"{safe_base}.jpg"
 
-        stream = getattr(file, "stream", file)
+        stream = self._get_file_stream(file)
         if hasattr(stream, "seek"):
             stream.seek(0)
 
@@ -160,7 +186,7 @@ class CloudService:
             payload = {
                 "stream": stream,
                 "content_type": "image/jpeg",
-                "content_length": getattr(file, "content_length", None) or 0,
+                "content_length": self._get_content_length(file),
             }
             return payload, output_filename, None, None
 
@@ -198,20 +224,88 @@ class CloudService:
     def upload_glb(self, file, filename):
         """Upload GLB file to NextCloud and save metadata in database."""
         return self._upload_to_folder(file, filename, "customs", "glb")
+    
+    def upload_model(self, file, filename: str, user_id: str, category: str) -> Tuple[Dict[str, Any], int]:
+        """Upload model file with category validation for garments.
+        
+        Args:
+            file: File object to upload
+            filename: Name of the file
+            user_id: User ID for folder organization
+            category: Garment category (shirt, pants, skirt, accessory)
+            
+        Returns:
+            Tuple of (response_dict, status_code)
+        """
+        # Validate file extension
+        safe_filename = secure_filename(filename or "")
+        if not safe_filename:
+            return {"error": "Invalid filename"}, 400
+        
+        if not safe_filename.lower().endswith(('.glb', '.gltf')):
+            return {"error": "Only GLB/GLTF files allowed"}, 400
+        
+        # Validate file size
+        content_length = self._get_content_length(file)
+        if content_length > self.max_file_size:
+            return {"error": f"File too large (max {self.max_file_size // (1024*1024)}MB)"}, 413
+        
+        # Validate category
+        if category.lower() not in VALID_GARMENT_CATEGORIES:
+            valid = ', '.join(sorted(VALID_GARMENT_CATEGORIES))
+            return {"error": f"Invalid category. Must be one of: {valid}"}, 400
+        
+        # Upload to folder: garments/{user_id}/{category}/
+        folder = f"garments/{user_id}/{category.lower()}"
+        return self._upload_to_folder(file, safe_filename, folder, "model")
+    
+    def delete_file(self, file_id: str) -> Tuple[Dict[str, Any], int]:
+        """Delete a file from cloud storage and database.
+        
+        Args:
+            file_id: MongoDB file document ID
+            
+        Returns:
+            Tuple of (response_dict, status_code)
+        """
+        try:
+            file_doc = self.db.files.find_one({'_id': ObjectId(file_id)})
+            if not file_doc:
+                return {"error": "File not found"}, 404
+            
+            ok, err, code = self._nextcloud_configured()
+            if not ok:
+                return err, code
+            
+            # Delete from NextCloud
+            response = requests.delete(
+                file_doc['url'],
+                auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
+                timeout=DEFAULT_UPLOAD_TIMEOUT
+            )
+            
+            if response.status_code not in (204, 200):
+                return {"error": f"Failed to delete from NextCloud: {response.status_code}"}, 500
+            
+            # Delete from MongoDB
+            self.db.files.delete_one({'_id': ObjectId(file_id)})
+            return {"status": "success", "message": "File deleted successfully"}, 200
+        except Exception as e:
+            return {"error": f"Failed to delete file: {str(e)}"}, 500
         
     def get_url_image_profile(self, user_id):
         """Get public URL for an image stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
-        return f"{self.nextcloud_url}profile_pictures/{user_id}/profile.jpg"
+        return f"{self.nextcloud_url}profile_pictures/{user_id}.jpg"
     
     def get_url_custom(self, user_id, filename):
         """Get public URL for an image stored in NextCloud."""
         ok, err, code = self._nextcloud_configured()
         if not ok:
             return err, code
-        return f"{self.nextcloud_url}{user_id}/{filename}"
+        return f"{self.nextcloud_url}images/{user_id}/{filename}"
     
     def get_url_garment_default(self, garment_name):
         """Get public URL for a garment file stored in NextCloud."""

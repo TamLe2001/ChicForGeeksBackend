@@ -19,7 +19,11 @@ class FileService:
         """
         self.db = db
         self.config = config
-        self.cloud = current_app.cloud_service if hasattr(current_app, 'cloud_service') else None
+
+    @property
+    def cloud(self):
+        """Resolve cloud service from the active app context when needed."""
+        return getattr(current_app, 'cloud_service', None)
 
     @staticmethod
     def _normalize_base_url(url: Optional[str]) -> Optional[str]:

@@ -77,16 +77,16 @@ def create_app():
     
     with app.app_context():
         try:
+            app.cloud_service = CloudService(app.db, app.config)
+            print("CloudService initialized and attached to app as app.cloud_service")
+        except Exception as e:
+            print(f"⚠ Warning: Failed to initialize CloudService: {e}")
+        try:
             file_service = FileService(app.db, app.config)
             uploads_path = os.path.join(app.root_path, '..', 'uploads')
             file_service.download_default_files(uploads_path)
         except Exception as e:
             print(f"⚠ Warning: Failed to initialize default files: {e}")
-        try:
-            app.cloud_service = CloudService(app.db, app.config)
-            print("CloudService initialized and attached to app as app.cloud_service")
-        except Exception as e:
-            print(f"⚠ Warning: Failed to initialize CloudService: {e}")
     return app
 
 

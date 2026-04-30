@@ -3,9 +3,10 @@
 from api.routes.auth import auth_bp
 from api.routes.users import users_bp
 from api.routes.outfits import outfits_bp
+from api.routes.outfit_likes import outfit_likes_bp
+from api.routes.outfit_comments import outfit_comments_bp
 from api.routes.follows import follows_bp
 from api.routes.files import files_bp
-from api.routes.chicforgeeksAR import chicforgeeks_ar_bp
 from api.routes.garments import garments_bp
 from api.routes.wardrobes import wardrobes_bp
 
@@ -16,10 +17,11 @@ def register_blueprints(app):
         auth_bp,
         users_bp,
         outfits_bp,
+        outfit_likes_bp,
+        outfit_comments_bp,
         follows_bp,
         wardrobes_bp,
         files_bp,
-        chicforgeeks_ar_bp,
         garments_bp,
     ]
     
@@ -31,10 +33,11 @@ __all__ = [
     'auth_bp',
     'users_bp',
     'outfits_bp',
+    'outfit_likes_bp',
+    'outfit_comments_bp',
     'follows_bp',
     'wardrobes_bp',
     'files_bp',
-    'chicforgeeks_ar_bp',
     'garments_bp',
     'register_blueprints',
 ]
