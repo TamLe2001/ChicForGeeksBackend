@@ -72,6 +72,9 @@ def upload_profile_picture_to_cloud():
             return jsonify(upload_result), upload_code
 
         profile_picture = upload_result.get('cloud_url')
+        file_id = upload_result.get('file_id')
+        if file_id:
+            profile_picture = f"{request.host_url.rstrip('/')}/api/public/image/{file_id}"
         if not profile_picture:
             return jsonify({'error': 'upload succeeded but no profile URL returned'}), 500
 
@@ -96,6 +99,38 @@ def upload_profile_picture_to_cloud():
         return jsonify({'error': f'Failed to upload profile picture: {str(e)}'}), 500
 
 
+@files_bp.route('/public/image/<file_id>', methods=['GET'])
+def get_public_image(file_id):
+    """Public endpoint to download uploaded images without authentication."""
+    try:
+        file_doc = current_app.db.files.find_one({'_id': ObjectId(file_id)})
+        if not file_doc:
+            return jsonify({'error': 'File not found'}), 404
+
+        cloud = getattr(current_app, 'cloud_service', None)
+        if not cloud:
+            return jsonify({'error': 'cloud service not available'}), 500
+
+        response = requests.get(
+            file_doc['url'],
+            auth=HTTPBasicAuth(cloud.nextcloud_user, cloud.nextcloud_pass),
+            timeout=30
+        )
+
+        if response.status_code != 200:
+            return jsonify({'error': f'Failed to download file: {response.status_code}'}), 502
+
+        content_type = file_doc.get('content_type', 'application/octet-stream')
+        return Response(response.content, mimetype=content_type, status=200)
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Download timeout'}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Download failed: {str(e)}'}), 502
+    except Exception as e:
+        return jsonify({'error': f'Failed to get public image: {str(e)}'}), 500
+
+
 @files_bp.route('/upload/images', methods=['POST'])
 @token_required
 def upload_image_to_cloud():
@@ -115,6 +150,10 @@ def upload_image_to_cloud():
             return jsonify({'error': 'cloud service not available'}), 500
 
         result, status_code = cloud.upload_image_custom(file, file.filename)
+        if status_code == 201 and isinstance(result, dict):
+            file_id = result.get('file_id')
+            if file_id:
+                result['file_url'] = f"{request.host_url.rstrip('/')}/api/public/image/{file_id}"
         return jsonify(result), status_code
 
     except Exception as e:
