@@ -19,7 +19,6 @@ def upload_to_cloud():
 
 
 @files_bp.route('/upload/models', methods=['POST'])
-@token_required
 def upload_model_to_cloud():
     """Upload GLB/GLTF files to NextCloud storage with category organization.
     
@@ -53,7 +52,6 @@ def upload_model_to_cloud():
 
 
 @files_bp.route('/upload/profile', methods=['POST'])
-@token_required
 def upload_profile_picture_to_cloud():
     """Upload profile image to cloud and return profile picture URL."""
     try:
@@ -97,7 +95,6 @@ def upload_profile_picture_to_cloud():
 
 
 @files_bp.route('/upload/images', methods=['POST'])
-@token_required
 def upload_image_to_cloud():
     """Upload image files to NextCloud storage (PNG/JPG/JPEG)."""
     try:
@@ -166,7 +163,6 @@ def get_file(file_id):
 
 
 @files_bp.route('/files/<file_id>', methods=['DELETE'])
-@token_required
 def delete_file(file_id):
     """Delete file from NextCloud and database."""
     try:
@@ -182,7 +178,6 @@ def delete_file(file_id):
 
 
 @files_bp.route('/files', methods=['DELETE'])
-@token_required
 def delete_file_by_url():
     """Delete file by URL payload."""
     try:
