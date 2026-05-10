@@ -22,6 +22,8 @@ class Skirt(Garment):
             display_name=data.get("display_name"),
             thumbnail_url=data.get("thumbnail_url"),
             is_custom=data.get("is_custom", False),
+            custom_position=data.get("custom_position"),
+            custom_scale=data.get("custom_scale"),
         )
         # Preserve MongoDB _id field
         skirt._id = data.get("_id")
