@@ -109,8 +109,15 @@ class CommentService:
             # Fetch author info for response
             user = self.db.users.find_one({'_id': user_id})
             if user:
-                comment_dict['author_name'] = user.get('name')
-                comment_dict['author_profile_picture'] = user.get('profile_picture')
+                comment_dict['author'] = {
+                    'name': user.get('name'),
+                    'profile_picture': user.get('profile_picture'),
+                }
+            else:
+                comment_dict['author'] = {
+                    'name': user_name,
+                    'profile_picture': user_profile_picture,
+                }
             
             return comment_dict, 201
 
@@ -243,10 +250,13 @@ class CommentService:
         """
         return {
             'id': str(doc.get('_id')),
+            '_id': str(doc.get('_id')),
             'content': doc.get('content', ''),
             'outfit_id': str(doc.get('outfit_id')),
             'user_id': str(doc.get('user_id')),
-            'author_name': doc.get('author_name'),
-            'author_profile_picture': doc.get('author_profile_picture'),
+            'author': {
+                'name': doc.get('author_name'),
+                'profile_picture': doc.get('author_profile_picture'),
+            },
             'created_at': doc.get('created_at'),
         }
