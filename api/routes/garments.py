@@ -18,6 +18,62 @@ def _get_garment_service() -> GarmentService:
     return GarmentService(current_app.db)
 
 
+def _validate_custom_position(position):
+    """
+    Validate custom position coordinates.
+    
+    Args:
+        position: Should be a list of 3 numbers in range -2 to 2
+        
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if position is None:
+        return True, None
+    
+    if not isinstance(position, list) or len(position) != 3:
+        return False, "custom_position must be an array of 3 numbers"
+    
+    try:
+        for val in position:
+            if not isinstance(val, (int, float)):
+                return False, "custom_position values must be numbers"
+            if val < -2 or val > 2:
+                return False, "custom_position values must be in range -2 to 2"
+    except (TypeError, ValueError):
+        return False, "custom_position contains invalid values"
+    
+    return True, None
+
+
+def _validate_custom_scale(scale):
+    """
+    Validate custom scale factors.
+    
+    Args:
+        scale: Should be a list of 3 numbers in range 0.1 to 5
+        
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if scale is None:
+        return True, None
+    
+    if not isinstance(scale, list) or len(scale) != 3:
+        return False, "custom_scale must be an array of 3 numbers"
+    
+    try:
+        for val in scale:
+            if not isinstance(val, (int, float)):
+                return False, "custom_scale values must be numbers"
+            if val < 0.1 or val > 5:
+                return False, "custom_scale values must be in range 0.1 to 5"
+    except (TypeError, ValueError):
+        return False, "custom_scale contains invalid values"
+    
+    return True, None
+
+
 @garments_bp.get('/default')
 def get_default_garments():
 	"""Get all default garments metadata grouped by type."""
@@ -191,6 +247,17 @@ def create_garment():
     user_id = str(g.current_user.get("_id"))
 
     try:
+        # Validate custom position and scale if provided
+        custom_position = payload.get("custom_position")
+        is_valid, error_msg = _validate_custom_position(custom_position)
+        if not is_valid:
+            return jsonify({"error": error_msg}), 400
+        
+        custom_scale = payload.get("custom_scale")
+        is_valid, error_msg = _validate_custom_scale(custom_scale)
+        if not is_valid:
+            return jsonify({"error": error_msg}), 400
+
         model_source_url = payload.get("source_url")
         if not model_source_url:
             return jsonify({"error": "source_url is required"}), 400
@@ -203,6 +270,8 @@ def create_garment():
             "display_name": payload.get("display_name"),
             "is_custom": True,  # Mark all garments created through this endpoint as custom
             "id": uuid4().hex,
+            "custom_position": custom_position,
+            "custom_scale": custom_scale,
         }
         
         # Add optional common fields if present
