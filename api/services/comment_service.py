@@ -21,7 +21,7 @@ class CommentService:
     MAX_COMMENT_LENGTH = 1000
 
     def get_outfit_comments(self, outfit_id: ObjectId) -> Tuple[Dict[str, Any], int]:
-        """Get all comments for an outfit.
+        """Get all comments for an outfit with author info via lookup.
         
         Args:
             outfit_id: ObjectId of the outfit
@@ -30,11 +30,33 @@ class CommentService:
             Tuple of (response_dict, status_code)
         """
         try:
-            comments_cursor = self.db.comments.find(
-                {'outfit_id': outfit_id}
-            ).sort('created_at', -1)
+            pipeline = [
+                {'$match': {'outfit_id': outfit_id}},
+                {'$sort': {'created_at': -1}},
+                {
+                    '$lookup': {
+                        'from': 'users',
+                        'localField': 'user_id',
+                        'foreignField': '_id',
+                        'as': 'author'
+                    }
+                },
+                {'$unwind': {'path': '$author', 'preserveNullAndEmptyArrays': True}},
+                {
+                    '$project': {
+                        '_id': 1,
+                        'content': 1,
+                        'outfit_id': 1,
+                        'user_id': 1,
+                        'author_name': '$author.name',
+                        'author_profile_picture': '$author.profile_picture',
+                        'created_at': 1,
+                    }
+                }
+            ]
             
-            comments = [Comment.from_doc(doc).to_dict() for doc in comments_cursor]
+            docs = list(self.db.comments.aggregate(pipeline))
+            comments = [self._doc_to_dict(doc) for doc in docs]
             
             return {
                 'status': 'success',
@@ -57,8 +79,8 @@ class CommentService:
         Args:
             outfit_id: ObjectId of the outfit
             user_id: ObjectId of the user creating comment
-            user_name: Name of the user
-            user_profile_picture: User's profile picture URL
+            user_name: Name of the user (validation only, not stored)
+            user_profile_picture: User's profile picture URL (validation only, not stored)
             content: Comment content
             
         Returns:
@@ -75,10 +97,6 @@ class CommentService:
             comment_doc = {
                 'outfit_id': outfit_id,
                 'user_id': user_id,
-                'author': {
-                    'name': user_name,
-                    'profile_picture': user_profile_picture,
-                },
                 'content': content,
                 'created_at': datetime.now(timezone.utc),
                 'updated_at': datetime.now(timezone.utc),
@@ -86,7 +104,15 @@ class CommentService:
 
             result = self.db.comments.insert_one(comment_doc)
             created = self.db.comments.find_one({'_id': result.inserted_id})
-            return Comment.from_doc(created).to_dict(), 201
+            comment_dict = Comment.from_doc(created).to_dict()
+            
+            # Fetch author info for response
+            user = self.db.users.find_one({'_id': user_id})
+            if user:
+                comment_dict['author_name'] = user.get('name')
+                comment_dict['author_profile_picture'] = user.get('profile_picture')
+            
+            return comment_dict, 201
 
         except Exception as e:
             return {'error': f'Failed to create comment: {str(e)}'}, 500
@@ -140,7 +166,6 @@ class CommentService:
                 {'_id': comment_id},
                 {'$set': {
                     'content': content,
-                    'updated_at': datetime.now(timezone.utc)
                 }},
             )
 
@@ -206,3 +231,22 @@ class CommentService:
             return self.db.comments.count_documents({'outfit_id': outfit_id})
         except Exception:
             return 0
+
+    def _doc_to_dict(self, doc: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert aggregated comment document to dict with author info.
+        
+        Args:
+            doc: Document from aggregation pipeline (includes author fields)
+            
+        Returns:
+            Dictionary representation of comment
+        """
+        return {
+            'id': str(doc.get('_id')),
+            'content': doc.get('content', ''),
+            'outfit_id': str(doc.get('outfit_id')),
+            'user_id': str(doc.get('user_id')),
+            'author_name': doc.get('author_name'),
+            'author_profile_picture': doc.get('author_profile_picture'),
+            'created_at': doc.get('created_at'),
+        }

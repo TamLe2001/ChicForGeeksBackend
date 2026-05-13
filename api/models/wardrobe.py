@@ -10,12 +10,10 @@ class Wardrobe:
         user_id: str,
         outfit_ids: Optional[List[str]] = None,
         created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
     ):
         self.user_id = user_id
         self.outfit_ids = outfit_ids or []
         self.created_at = created_at or datetime.now(timezone.utc)
-        self.updated_at = updated_at or self.created_at
         self._id = None
 
     @staticmethod
@@ -28,7 +26,6 @@ class Wardrobe:
             user_id=payload.get('user_id'),
             outfit_ids=payload.get('outfit_ids') or [],
             created_at=payload.get('created_at'),
-            updated_at=payload.get('updated_at'),
         )
 
     @staticmethod
@@ -41,7 +38,6 @@ class Wardrobe:
             user_id=str(wardrobe_doc.get('user_id')),
             outfit_ids=[str(oid) for oid in (wardrobe_doc.get('outfit_ids') or [])],
             created_at=wardrobe_doc.get('created_at'),
-            updated_at=wardrobe_doc.get('updated_at'),
         )
         wardrobe._id = wardrobe_doc.get('_id')
         return wardrobe
@@ -54,5 +50,4 @@ class Wardrobe:
             'outfit_ids': self.outfit_ids,
             'outfit_count': len(self.outfit_ids),
             'created_at': self.created_at,
-            'updated_at': self.updated_at,
         }

@@ -28,7 +28,6 @@ def _get_or_create_wardrobe(user_id: str):
         'user_id': user_id,
         'outfit_ids': [],
         'created_at': now,
-        'updated_at': now,
     }
     result = current_app.db.wardrobes.insert_one(created_doc)
     return current_app.db.wardrobes.find_one({'_id': result.inserted_id})
@@ -70,7 +69,6 @@ def add_outfit_to_wardrobe(outfit_id):
         {'user_id': user_id},
         {
             '$addToSet': {'outfit_ids': outfit_oid},
-            '$set': {'updated_at': datetime.now(timezone.utc)},
         },
     )
 
@@ -92,7 +90,6 @@ def remove_outfit_from_wardrobe(outfit_id):
         {'user_id': user_id},
         {
             '$pull': {'outfit_ids': outfit_oid},
-            '$set': {'updated_at': datetime.now(timezone.utc)},
         },
     )
 
