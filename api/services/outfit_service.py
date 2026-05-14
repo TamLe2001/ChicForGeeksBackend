@@ -55,14 +55,9 @@ class OutfitService:
 
             outfits: List[Dict[str, Any]] = []
             for doc in results:
-                user_name = doc.get("user_name")
-                user_profile_pic = doc.get("user_profile_pic")
                 user_id = doc.get("user_id")
-
                 outfit_dict = Outfit.from_doc(doc).to_dict()
                 outfit_dict["userId"] = str(user_id) if user_id else None
-                outfit_dict["userName"] = user_name
-                outfit_dict["userProfilePic"] = user_profile_pic
                 outfits.append(outfit_dict)
 
             return outfits, 200
