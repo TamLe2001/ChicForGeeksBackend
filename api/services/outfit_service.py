@@ -42,6 +42,7 @@ class OutfitService:
                         "pants": 1,
                         "skirt": 1,
                         "accessory": 1,
+                        "thumbnail": 1,
                         "user_id": 1,
                         "published": 1,
                         "created_at": 1,
@@ -92,29 +93,28 @@ class OutfitService:
                 "skirt": outfit.skirt,
                 "accessory": outfit.accessory,
                 "published": outfit.published,
+                "thumbnail": outfit.thumbnail,
                 "created_at": outfit.created_at,
             }
 
             result = self.db.outfits.insert_one(outfit_doc)
             outfit_id = str(result.inserted_id)
 
-            thumbnail_url = None
+            # Generate file-based thumbnail if provided
             if payload.get("thumbnail"):
                 try:
                     uploads_path = current_app.config.get("UPLOAD_PATH", "uploads")
                     from api.services.thumbnail_service import ThumbnailService
 
                     thumbnail_service = ThumbnailService(self.db, uploads_path)
-                    thumbnail_url = thumbnail_service.generate_thumbnail(
+                    thumbnail_service.generate_thumbnail(
                         outfit_id, payload.get("thumbnail"), outfit.name
                     )
                 except Exception:
-                    current_app.logger.exception("Failed to generate thumbnail")
+                    current_app.logger.exception("Failed to generate file-based thumbnail")
 
             created = self.db.outfits.find_one({"_id": result.inserted_id})
             outfit_dict = Outfit.from_doc(created).to_dict()
-            if thumbnail_url:
-                outfit_dict["thumbnail"] = thumbnail_url
 
             return outfit_dict, 201
         except Exception:
@@ -145,11 +145,24 @@ class OutfitService:
         if "bio" in payload:
             payload.pop("bio")
 
-        allowed_fields = {"name", "description", "shirt", "pants", "published"}
+        allowed_fields = {"name", "description", "shirt", "pants", "published", "thumbnail"}
         update_fields = {k: v for k, v in payload.items() if k in allowed_fields}
 
         if not update_fields:
             return {"error": "nothing to update"}, 400
+
+        # Handle thumbnail file update if thumbnail is being updated
+        if "thumbnail" in update_fields and update_fields["thumbnail"]:
+            try:
+                uploads_path = current_app.config.get("UPLOAD_PATH", "uploads")
+                from api.services.thumbnail_service import ThumbnailService
+                
+                thumbnail_service = ThumbnailService(self.db, uploads_path)
+                thumbnail_service.generate_thumbnail(
+                    outfit_id, update_fields["thumbnail"], payload.get("name")
+                )
+            except Exception:
+                current_app.logger.exception("Failed to update file-based thumbnail")
 
         result = self.db.outfits.update_one({"_id": oid}, {"$set": update_fields})
         if result.matched_count == 0:

@@ -18,6 +18,7 @@ class Outfit:
 		skirt: Optional[str] = None,
 		accessory: Optional[str] = None,
 		published: bool = False,
+		thumbnail: Optional[str] = None,
 		created_at: Optional[datetime] = None,
 	):
 		"""
@@ -33,6 +34,7 @@ class Outfit:
 			skirt: Skirt garment id
 			accessory: Accessory garment id
 			published: Whether outfit is published
+			thumbnail: Base64-encoded thumbnail image (no size limit)
 			created_at: Creation timestamp
 		"""
 		self.name = name
@@ -43,6 +45,7 @@ class Outfit:
 		self.pants = pants
 		self.skirt = skirt
 		self.accessory = accessory
+		self.thumbnail = thumbnail
 		self.published = published
 		self.created_at = created_at or datetime.now(timezone.utc)
 		self._id = None  # Set by database
@@ -63,6 +66,7 @@ class Outfit:
 			skirt=payload.get('skirt'),
 			accessory=payload.get('accessory'),
 			published=payload.get('published', False),
+			thumbnail=payload.get('thumbnail'),
 			created_at=payload.get('created_at'),
 		)
 
@@ -82,6 +86,7 @@ class Outfit:
 			skirt=outfit_doc.get('skirt'),
 			accessory=outfit_doc.get('accessory'),
 			published=outfit_doc.get('published', False),
+			thumbnail=outfit_doc.get('thumbnail'),
 			created_at=outfit_doc.get('created_at'),
 		)
 		outfit._id = outfit_doc.get('_id')
@@ -99,6 +104,7 @@ class Outfit:
 			'pants': self.pants,
 			'skirt': self.skirt,
 			'accessory': self.accessory,
+			'thumbnail': self.thumbnail,
 			'published': self.published,
 			'created_at': self.created_at,
 		}
