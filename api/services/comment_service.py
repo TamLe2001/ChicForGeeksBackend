@@ -1,6 +1,6 @@
 """Service for managing outfit comments."""
 
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime, timezone
 from bson import ObjectId
 from api.models.comment import Comment

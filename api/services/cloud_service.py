@@ -13,8 +13,6 @@ from api.models.image import Image as ImageType
 
 
 DEFAULT_UPLOAD_TIMEOUT = 30
-DEFAULT_FOLDER_TIMEOUT = 10
-DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024
 VALID_GARMENT_CATEGORIES = {'shirt', 'pants', 'skirt', 'accessory'}
 
 
@@ -34,7 +32,7 @@ class CloudService:
         self.nextcloud_url = self._normalize_base_url(config.get('NEXTCLOUD_URL'))
         self.nextcloud_user = config.get('NEXTCLOUD_USER')
         self.nextcloud_pass = config.get('NEXTCLOUD_PASS')
-        self.max_file_size = config.get('MAX_FILE_SIZE', DEFAULT_MAX_FILE_SIZE)
+        self.max_file_size = config.get('MAX_FILE_SIZE', 104857600)  # 104857600 = 100 MB
 
     @staticmethod
     def _normalize_base_url(url: Optional[str]) -> Optional[str]:
@@ -98,7 +96,7 @@ class CloudService:
                 "MKCOL",
                 folder_url,
                 auth=HTTPBasicAuth(self.nextcloud_user, self.nextcloud_pass),
-                timeout=DEFAULT_FOLDER_TIMEOUT,
+                timeout=10, # DEFAULT FOLDER TIMEOUT
             )
 
             if response.status_code not in (201, 405):

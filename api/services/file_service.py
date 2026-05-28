@@ -2,7 +2,6 @@
 
 import os
 from datetime import datetime
-from typing import Optional
 from flask import current_app
 
 
@@ -25,13 +24,6 @@ class FileService:
         """Resolve cloud service from the active app context when needed."""
         return getattr(current_app, 'cloud_service', None)
 
-    @staticmethod
-    def _normalize_base_url(url: Optional[str]) -> Optional[str]:
-        """Ensure base URL ends with a slash for safe joining."""
-        if not url:
-            return None
-			
-        return url if url.endswith('/') else f"{url}/"
 
     def download_default_files(self, uploads_base_path: str) -> None:
         """
@@ -67,8 +59,6 @@ class FileService:
     def _ensure_directory(self, directory_path: str) -> None:
         """Create directory if it doesn't exist."""
         os.makedirs(directory_path, exist_ok=True)
-
-    # _download_and_extract_files removed (zip download not needed)
 
     def _register_files_in_database(self, default_dir: str) -> None:
         """

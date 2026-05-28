@@ -1,6 +1,6 @@
 """Service for managing outfit likes."""
 
-from typing import Optional, Dict, Any, Tuple
+from typing import Dict, Any, Tuple
 from datetime import datetime, timezone
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
