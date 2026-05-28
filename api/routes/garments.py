@@ -433,6 +433,60 @@ def update_garment(garment_id):
         return jsonify({"error": str(e)}), 500
 
 
+@garments_bp.patch("/garments/<garment_id>")
+@token_required
+def patch_garment(garment_id):
+    """Update custom position and scale for a garment."""
+    payload = request.get_json(silent=True) or {}
+    user_id = str(g.current_user.get("_id"))
+
+    service = _get_garment_service()
+    
+    try:
+        garment = service.get_garment(garment_id)
+        if not garment:
+            return jsonify({"error": "garment not found"}), 404
+
+        if garment.user_id != user_id:
+            return jsonify({"error": "not authorized to update this garment"}), 403
+
+        # Validate custom position if provided
+        custom_position = payload.get("custom_position")
+        if custom_position is not None:
+            is_valid, error_msg = _validate_custom_position(custom_position)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
+
+        # Validate custom scale if provided
+        custom_scale = payload.get("custom_scale")
+        if custom_scale is not None:
+            is_valid, error_msg = _validate_custom_scale(custom_scale)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
+
+        # Prepare updates - only include provided fields
+        updates = {}
+        if "custom_position" in payload:
+            updates["custom_position"] = custom_position
+        if "custom_scale" in payload:
+            updates["custom_scale"] = custom_scale
+
+        if not updates:
+            return jsonify({"error": "no valid fields to update"}), 400
+
+        service.update_garment(garment_id, updates)
+
+        updated_garment = service.get_garment(garment_id)
+        return (
+            jsonify(
+                {"status": "updated", "garment": updated_garment.to_dict()}
+            ),
+            200,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @garments_bp.delete("/garments/<garment_id>")
 @token_required
 def delete_garment(garment_id):
